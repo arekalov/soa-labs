@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>СОА. Лабораторная работа №1</title>
+  <link rel="stylesheet" href="swagger-ui/swagger-ui.css">
+  <style>
+    html { box-sizing: border-box; overflow-y: scroll; }
+    *, *::before, *::after { box-sizing: inherit; }
+    body { margin: 0; background: #fafafa; }
+    .topbar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 20px; background: #1b1b1b; color: #fff;
+      font-family: sans-serif; font-size: 14px;
+    }
+    .topbar select { padding: 4px 8px; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <span>СОА. Лабораторная работа №1</span>
+    <label>
+      Сервис:
+      <select id="spec-select">
+        <option value="spacemarine-service.yaml">SpaceMarine Service</option>
+        <option value="starship-service.yaml">Starship Service</option>
+      </select>
+    </label>
+  </div>
+  <div id="swagger-ui"></div>
+  <script src="swagger-ui/swagger-ui-bundle.js"></script>
+  <script>
+    function render(url) {
+      window.ui = SwaggerUIBundle({
+        url: url,
+        dom_id: "#swagger-ui",
+        deepLinking: true,
+        presets: [SwaggerUIBundle.presets.apis],
+        validatorUrl: null
+      });
+    }
+    document.getElementById("spec-select").addEventListener("change", function (e) {
+      render(e.target.value);
+    });
+    render("spacemarine-service.yaml");
+  </script>
+</body>
+</html>

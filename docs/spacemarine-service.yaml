@@ -1,0 +1,653 @@
+openapi: 3.0.3
+info:
+  title: SpaceMarine Service
+  version: 1.0.0
+  description: |
+    Сервис осуществляет управление коллекцией объектов `SpaceMarine`:
+    * базовый набор операций: добавление нового элемента, получение элемента по ИД,
+      обновление элемента, удаление элемента, получение массива элементов;
+    * получение массива элементов поддерживает **фильтрацию** и **сортировку** по любой
+      комбинации полей класса, а также **постраничный вывод** с указанием размера
+      и порядкового номера выводимой страницы;
+    * дополнительные операции (размещены на отдельных URL): получение объекта
+      с минимальным значением поля `health`, группировка объектов по полю `id`,
+      подсчёт количества объектов с заданным значением поля `chapter`.
+
+security: []
+
+tags:
+  - name: SpaceMarine CRUD
+    description: Базовый набор операций с объектами коллекции
+  - name: SpaceMarine extra
+    description: Дополнительные операции над объектами коллекции (отдельные URL)
+
+paths:
+  /space-marines:
+    get:
+      tags: [SpaceMarine CRUD]
+      operationId: getSpaceMarines
+      summary: Получить массив элементов коллекции
+      description: |
+        Возвращает массив объектов `SpaceMarine` с поддержкой постраничного вывода.
+
+        **Фильтрация** — по любой комбинации полей класса: каждому полю соответствует
+        отдельный query-параметр; указанные параметры объединяются по условию «И»
+        (равенство значения поля переданному значению).
+
+        **Сортировка** — параметр `sort` можно указывать несколько раз; порядок
+        параметров задаёт приоритет сортировки, префикс `-` — сортировка по убыванию.
+
+        **Пагинация** — параметры `page` (порядковый номер страницы, начиная с 0)
+        и `size` (размер страницы).
+      parameters:
+        - name: id
+          in: query
+          description: Фильтр по полю `id` (точное совпадение)
+          required: false
+          schema:
+            type: integer
+            format: int32
+            exclusiveMinimum: true
+            minimum: 0
+          example: 1
+        - name: name
+          in: query
+          description: Фильтр по полю `name` (точное совпадение)
+          required: false
+          schema:
+            type: string
+            minLength: 1
+          example: Brother Marius
+        - name: coordinatesX
+          in: query
+          description: Фильтр по полю `coordinates.x` (точное совпадение)
+          required: false
+          schema:
+            type: integer
+          example: 10
+        - name: coordinatesY
+          in: query
+          description: Фильтр по полю `coordinates.y` (точное совпадение)
+          required: false
+          schema:
+            type: number
+            format: double
+            maximum: 12
+          example: 3.5
+        - name: creationDate
+          in: query
+          description: Фильтр по полю `creationDate` (точное совпадение, ISO 8601)
+          required: false
+          schema:
+            type: string
+            format: date-time
+          example: "2026-09-10T12:00:00Z"
+        - name: health
+          in: query
+          description: Фильтр по полю `health` (точное совпадение)
+          required: false
+          schema:
+            type: number
+            format: float
+            exclusiveMinimum: true
+            minimum: 0
+          example: 85.5
+        - name: loyal
+          in: query
+          description: Фильтр по полю `loyal`
+          required: false
+          schema:
+            type: boolean
+          example: true
+        - name: achievements
+          in: query
+          description: Фильтр по полю `achievements` (точное совпадение)
+          required: false
+          schema:
+            type: string
+          example: Hero of Macragge
+        - name: category
+          in: query
+          description: Фильтр по полю `category`
+          required: false
+          schema:
+            $ref: '#/components/schemas/AstartesCategory'
+        - name: chapterName
+          in: query
+          description: Фильтр по полю `chapter.name` (точное совпадение)
+          required: false
+          schema:
+            type: string
+            minLength: 1
+          example: Ultramarines
+        - name: chapterParentLegion
+          in: query
+          description: Фильтр по полю `chapter.parentLegion` (точное совпадение)
+          required: false
+          schema:
+            type: string
+          example: XIII Legion
+        - name: sort
+          in: query
+          description: |
+            Поля сортировки. Параметр можно указывать несколько раз
+            (например, `sort=category&sort=-health`); префикс `-` — по убыванию.
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - id
+                - -id
+                - name
+                - -name
+                - coordinatesX
+                - -coordinatesX
+                - coordinatesY
+                - -coordinatesY
+                - creationDate
+                - -creationDate
+                - health
+                - -health
+                - loyal
+                - -loyal
+                - achievements
+                - -achievements
+                - category
+                - -category
+                - chapterName
+                - -chapterName
+                - chapterParentLegion
+                - -chapterParentLegion
+          example: [-health, name]
+        - name: page
+          in: query
+          description: Порядковый номер выводимой страницы (начиная с 0)
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+            default: 0
+          example: 0
+        - name: size
+          in: query
+          description: Размер выводимой страницы (количество элементов на странице)
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            default: 20
+          example: 20
+      responses:
+        '200':
+          description: Страница с элементами коллекции, удовлетворяющими условиям выборки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpaceMarinePage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags: [SpaceMarine CRUD]
+      operationId: createSpaceMarine
+      summary: Добавить новый элемент в коллекцию
+      description: |
+        Создаёт новый объект `SpaceMarine` и добавляет его в коллекцию.
+        Поля `id` и `creationDate` генерируются сервером автоматически и в теле
+        запроса не передаются. Информация об объекте передаётся в формате JSON.
+      requestBody:
+        required: true
+        description: Новый объект `SpaceMarine` (без полей `id` и `creationDate`)
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SpaceMarineInput'
+      responses:
+        '201':
+          description: Элемент успешно создан и добавлен в коллекцию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpaceMarine'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /space-marines/{id}:
+    parameters:
+      - name: id
+        in: path
+        description: Идентификатор элемента коллекции (целое число больше 0)
+        required: true
+        schema:
+          type: integer
+          format: int32
+          exclusiveMinimum: true
+          minimum: 0
+        example: 1
+    get:
+      tags: [SpaceMarine CRUD]
+      operationId: getSpaceMarineById
+      summary: Получить элемент коллекции по ИД
+      description: Возвращает объект `SpaceMarine` с указанным идентификатором.
+      responses:
+        '200':
+          description: Найденный элемент коллекции
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpaceMarine'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      tags: [SpaceMarine CRUD]
+      operationId: updateSpaceMarine
+      summary: Обновить элемент коллекции
+      description: |
+        Полностью обновляет объект `SpaceMarine` с указанным идентификатором.
+        Поля `id` и `creationDate` изменению не подлежат.
+        Информация об объекте передаётся в формате JSON.
+      requestBody:
+        required: true
+        description: Новое состояние объекта `SpaceMarine`
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SpaceMarineInput'
+      responses:
+        '200':
+          description: Элемент успешно обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpaceMarine'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      tags: [SpaceMarine CRUD]
+      operationId: deleteSpaceMarine
+      summary: Удалить элемент коллекции
+      description: Удаляет объект `SpaceMarine` с указанным идентификатором из коллекции.
+      responses:
+        '204':
+          description: Элемент успешно удалён
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /space-marines/health/min:
+    get:
+      tags: [SpaceMarine extra]
+      operationId: getSpaceMarineWithMinHealth
+      summary: Получить объект с минимальным значением поля health
+      description: |
+        Возвращает один (любой) объект коллекции, значение поля `health` которого
+        является минимальным среди всех элементов коллекции.
+      responses:
+        '200':
+          description: Объект с минимальным значением поля `health`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpaceMarine'
+        '404':
+          description: Коллекция пуста — объект с минимальным `health` отсутствует
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /space-marines/groups/by-id:
+    get:
+      tags: [SpaceMarine extra]
+      operationId: groupSpaceMarinesById
+      summary: Сгруппировать объекты по значению поля id
+      description: |
+        Группирует объекты коллекции по значению поля `id` и возвращает
+        количество элементов в каждой группе.
+      responses:
+        '200':
+          description: Массив групп с количеством элементов в каждой группе
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/IdGroup'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /space-marines/count/by-chapter:
+    get:
+      tags: [SpaceMarine extra]
+      operationId: countSpaceMarinesByChapter
+      summary: Подсчитать объекты с заданным значением поля chapter
+      description: |
+        Возвращает количество объектов коллекции, значение поля `chapter` которых
+        равно заданному. Значение `chapter` задаётся параметрами `name`
+        и (необязательно) `parentLegion`.
+      parameters:
+        - name: name
+          in: query
+          description: Значение поля `chapter.name` искомого ордена
+          required: true
+          schema:
+            type: string
+            minLength: 1
+          example: Ultramarines
+        - name: parentLegion
+          in: query
+          description: Значение поля `chapter.parentLegion` искомого ордена
+          required: false
+          schema:
+            type: string
+          example: XIII Legion
+      responses:
+        '200':
+          description: Количество объектов с заданным значением поля `chapter`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CountResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  schemas:
+    SpaceMarine:
+      type: object
+      description: Элемент коллекции — космический десантник
+      required:
+        - id
+        - name
+        - coordinates
+        - creationDate
+        - health
+        - loyal
+        - category
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: >
+            Уникальный идентификатор. Значение больше 0,
+            генерируется сервером автоматически.
+          exclusiveMinimum: true
+          minimum: 0
+          readOnly: true
+          example: 1
+        name:
+          type: string
+          description: Имя десантника. Не может быть null или пустой строкой.
+          minLength: 1
+          example: Brother Marius
+        coordinates:
+          $ref: '#/components/schemas/Coordinates'
+        creationDate:
+          type: string
+          format: date-time
+          description: >
+            Дата создания. Не может быть null,
+            генерируется сервером автоматически.
+          readOnly: true
+          example: "2026-09-10T12:00:00Z"
+        health:
+          type: number
+          format: float
+          description: Здоровье. Значение больше 0.
+          exclusiveMinimum: true
+          minimum: 0
+          example: 85.5
+        loyal:
+          type: boolean
+          description: Признак лояльности.
+          example: true
+        achievements:
+          type: string
+          nullable: true
+          description: Достижения. Может быть null.
+          example: Hero of Macragge
+        category:
+          $ref: '#/components/schemas/AstartesCategory'
+        chapter:
+          type: object
+          nullable: true
+          description: Орден. Может быть null.
+          allOf:
+            - $ref: '#/components/schemas/Chapter'
+
+    SpaceMarineInput:
+      type: object
+      description: >
+        Данные для создания/обновления десантника. Поля `id` и `creationDate`
+        генерируются сервером и клиентом не передаются.
+      required:
+        - name
+        - coordinates
+        - health
+        - loyal
+        - category
+      properties:
+        name:
+          type: string
+          description: Имя десантника. Не может быть null или пустой строкой.
+          minLength: 1
+          example: Brother Marius
+        coordinates:
+          $ref: '#/components/schemas/Coordinates'
+        health:
+          type: number
+          format: float
+          description: Здоровье. Значение больше 0.
+          exclusiveMinimum: true
+          minimum: 0
+          example: 85.5
+        loyal:
+          type: boolean
+          description: Признак лояльности.
+          example: true
+        achievements:
+          type: string
+          nullable: true
+          description: Достижения. Может быть null.
+          example: Hero of Macragge
+        category:
+          $ref: '#/components/schemas/AstartesCategory'
+        chapter:
+          type: object
+          nullable: true
+          description: Орден. Может быть null.
+          allOf:
+            - $ref: '#/components/schemas/Chapter'
+
+    Coordinates:
+      type: object
+      description: Координаты десантника. Не может быть null.
+      required:
+        - x
+        - y
+      properties:
+        x:
+          type: integer
+          description: Координата X. Не может быть null.
+          example: 10
+        y:
+          type: number
+          format: double
+          description: Координата Y. Максимальное значение — 12, не может быть null.
+          maximum: 12
+          example: 3.5
+
+    Chapter:
+      type: object
+      description: Орден космического десанта
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: Название ордена. Не может быть null или пустой строкой.
+          minLength: 1
+          example: Ultramarines
+        parentLegion:
+          type: string
+          nullable: true
+          description: Родительский легион.
+          example: XIII Legion
+
+    AstartesCategory:
+      type: string
+      description: Категория десантника. Не может быть null.
+      enum:
+        - SCOUT
+        - SUPPRESSOR
+        - TACTICAL
+        - HELIX
+      example: TACTICAL
+
+    SpaceMarinePage:
+      type: object
+      description: Страница постраничного вывода элементов коллекции
+      required:
+        - items
+        - page
+        - size
+        - totalElements
+        - totalPages
+      properties:
+        items:
+          type: array
+          description: Элементы текущей страницы
+          items:
+            $ref: '#/components/schemas/SpaceMarine'
+        page:
+          type: integer
+          format: int32
+          description: Порядковый номер текущей страницы (начиная с 0)
+          example: 0
+        size:
+          type: integer
+          format: int32
+          description: Размер страницы
+          example: 20
+        totalElements:
+          type: integer
+          format: int64
+          description: Общее количество элементов, удовлетворяющих условиям выборки
+          example: 42
+        totalPages:
+          type: integer
+          format: int32
+          description: Общее количество страниц
+          example: 3
+
+    IdGroup:
+      type: object
+      description: Группа элементов коллекции по значению поля `id`
+      required:
+        - id
+        - count
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: Значение поля `id`, по которому выполнена группировка
+          example: 1
+        count:
+          type: integer
+          format: int64
+          description: Количество элементов в группе
+          example: 1
+
+    CountResult:
+      type: object
+      description: Результат операции подсчёта
+      required:
+        - count
+      properties:
+        count:
+          type: integer
+          format: int64
+          description: Количество объектов, удовлетворяющих условию
+          example: 5
+
+    Error:
+      type: object
+      description: Сведения об ошибке
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          format: int32
+          description: HTTP-код ошибки
+          example: 400
+        message:
+          type: string
+          description: Человекочитаемое описание ошибки
+          example: Параметр 'id' должен быть целым числом больше 0
+        details:
+          type: array
+          nullable: true
+          description: Список нарушенных ограничений (при ошибках валидации)
+          items:
+            type: string
+          example:
+            - "coordinates.y: максимальное значение поля — 12"
+
+  responses:
+    BadRequest:
+      description: Некорректный запрос — параметры запроса не соответствуют ожидаемому формату
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Элемент с указанным идентификатором не найден
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    UnprocessableEntity:
+      description: >
+        Переданные данные нарушают заданные на уровне класса ограничения целостности
+        (например, пустое имя, health ≤ 0, coordinates.y > 12)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InternalServerError:
+      description: Внутренняя ошибка сервера
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
