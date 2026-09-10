@@ -192,9 +192,6 @@ paths:
                 $ref: '#/components/schemas/SpaceMarinePage'
         '400':
           $ref: '#/components/responses/BadRequest'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
     post:
       tags: [SpaceMarine CRUD]
       operationId: createSpaceMarine
@@ -221,9 +218,6 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
   /space-marines/{id}:
     parameters:
       - name: id
@@ -252,8 +246,6 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
     put:
       tags: [SpaceMarine CRUD]
       operationId: updateSpaceMarine
@@ -282,8 +274,35 @@ paths:
           $ref: '#/components/responses/NotFound'
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
+    patch:
+      tags: [SpaceMarine CRUD]
+      operationId: patchSpaceMarine
+      summary: Частично обновить элемент коллекции
+      description: |
+        Частично обновляет объект `SpaceMarine` с указанным идентификатором:
+        изменяются только поля, переданные в теле запроса, остальные остаются
+        прежними. Поля `id` и `creationDate` изменению не подлежат.
+        Информация об объекте передаётся в формате JSON.
+      requestBody:
+        required: true
+        description: Изменяемые поля объекта `SpaceMarine` (любое подмножество)
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SpaceMarineUpdate'
+      responses:
+        '200':
+          description: Элемент успешно обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpaceMarine'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
     delete:
       tags: [SpaceMarine CRUD]
       operationId: deleteSpaceMarine
@@ -296,9 +315,6 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
   /space-marines/health/min:
     get:
       tags: [SpaceMarine extra]
@@ -320,9 +336,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
+              example:
+                code: 404
+                message: Коллекция пуста
   /space-marines/groups/by-id:
     get:
       tags: [SpaceMarine extra]
@@ -340,9 +356,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/IdGroup'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
   /space-marines/count/by-chapter:
     get:
       tags: [SpaceMarine extra]
@@ -377,9 +390,6 @@ paths:
                 $ref: '#/components/schemas/CountResult'
         '400':
           $ref: '#/components/responses/BadRequest'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
 components:
   schemas:
     SpaceMarine:
@@ -479,6 +489,40 @@ components:
           nullable: true
           description: Достижения. Может быть null.
           example: Hero of Macragge
+        category:
+          $ref: '#/components/schemas/AstartesCategory'
+        chapter:
+          type: object
+          nullable: true
+          description: Орден. Может быть null.
+          allOf:
+            - $ref: '#/components/schemas/Chapter'
+
+    SpaceMarineUpdate:
+      type: object
+      description: >
+        Поля для частичного обновления десантника — любое подмножество полей
+        `SpaceMarineInput`. Непереданные поля остаются без изменений.
+      properties:
+        name:
+          type: string
+          description: Имя десантника. Не может быть null или пустой строкой.
+          minLength: 1
+        coordinates:
+          $ref: '#/components/schemas/Coordinates'
+        health:
+          type: number
+          format: float
+          description: Здоровье. Значение больше 0.
+          exclusiveMinimum: true
+          minimum: 0
+        loyal:
+          type: boolean
+          description: Признак лояльности.
+        achievements:
+          type: string
+          nullable: true
+          description: Достижения. Может быть null.
         category:
           $ref: '#/components/schemas/AstartesCategory'
         chapter:
@@ -610,19 +654,15 @@ components:
           type: integer
           format: int32
           description: HTTP-код ошибки
-          example: 400
         message:
           type: string
           description: Человекочитаемое описание ошибки
-          example: Параметр 'id' должен быть целым числом больше 0
         details:
           type: array
           nullable: true
           description: Список нарушенных ограничений (при ошибках валидации)
           items:
             type: string
-          example:
-            - "coordinates.y: максимальное значение поля — 12"
 
   responses:
     BadRequest:
@@ -631,12 +671,18 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
+          example:
+            code: 400
+            message: Параметр 'id' должен быть целым числом больше 0
     NotFound:
       description: Элемент с указанным идентификатором не найден
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
+          example:
+            code: 404
+            message: Элемент с id=1 не найден
     UnprocessableEntity:
       description: >
         Переданные данные нарушают заданные на уровне класса ограничения целостности
@@ -645,9 +691,9 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
-    InternalServerError:
-      description: Внутренняя ошибка сервера
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
+          example:
+            code: 422
+            message: Нарушены ограничения целостности класса SpaceMarine
+            details:
+              - "coordinates.y: максимальное значение поля — 12"
+              - "health: значение должно быть больше 0"

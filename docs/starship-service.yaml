@@ -53,15 +53,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+              example:
+                code: 400
+                message: Параметр 'id' должен быть целым числом больше 0
         '409':
           description: Корабль с указанным идентификатором уже существует
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
+              example:
+                code: 409
+                message: Корабль с id=1 уже существует
   /starship/{starship-id}/unload/{space-marine-id}:
     post:
       tags: [Starship]
@@ -106,6 +109,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+              example:
+                code: 400
+                message: Параметр 'starship-id' должен быть целым числом больше 0
         '404':
           description: >
             Корабль с указанным идентификатором не найден, десантник не найден
@@ -114,14 +120,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
+              example:
+                code: 404
+                message: Корабль с id=1 не найден
         '503':
           description: Первый сервис (SpaceMarine Service) недоступен — операция не выполнена
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+              example:
+                code: 503
+                message: Сервис SpaceMarine недоступен, повторите запрос позже
 
 components:
   schemas:
@@ -186,16 +196,6 @@ components:
           type: integer
           format: int32
           description: HTTP-код ошибки
-          example: 404
         message:
           type: string
           description: Человекочитаемое описание ошибки
-          example: Корабль с id=1 не найден
-
-  responses:
-    InternalServerError:
-      description: Внутренняя ошибка сервера
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
