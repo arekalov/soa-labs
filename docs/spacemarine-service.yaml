@@ -216,6 +216,8 @@ paths:
                 $ref: '#/components/schemas/SpaceMarine'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
   /space-marines/{id}:
@@ -272,6 +274,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
     patch:
@@ -301,6 +305,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
     delete:
@@ -313,8 +319,15 @@ paths:
           description: Элемент успешно удалён
         '400':
           $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        '410':
+          description: Удалять нечего — элемент с указанным идентификатором не существует или уже удалён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: 410
+                message: Элемент с id=1 уже удалён или никогда не существовал
   /space-marines/health/min:
     get:
       tags: [SpaceMarine extra]
@@ -697,3 +710,12 @@ components:
             details:
               - "coordinates.y: максимальное значение поля — 12"
               - "health: значение должно быть больше 0"
+    UnsupportedMediaType:
+      description: Тело запроса передано не в формате JSON (требуется Content-Type application/json)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: 415
+            message: Поддерживается только Content-Type application/json

@@ -123,15 +123,26 @@ paths:
               example:
                 code: 404
                 message: Корабль с id=1 не найден
-        '503':
-          description: Первый сервис (SpaceMarine Service) недоступен — операция не выполнена
+        '502':
+          description: >
+            Первый сервис (SpaceMarine Service) недоступен или вернул
+            некорректный ответ — операция не выполнена
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                code: 503
-                message: Сервис SpaceMarine недоступен, повторите запрос позже
+                code: 502
+                message: Сервис SpaceMarine недоступен
+        '504':
+          description: Первый сервис (SpaceMarine Service) не ответил за отведённое время
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: 504
+                message: Превышено время ожидания ответа от сервиса SpaceMarine
 
 components:
   schemas:
@@ -199,3 +210,4 @@ components:
         message:
           type: string
           description: Человекочитаемое описание ошибки
+
