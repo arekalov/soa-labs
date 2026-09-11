@@ -65,6 +65,8 @@ paths:
               example:
                 code: 409
                 message: Корабль с id=1 уже существует
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /starship/{starship-id}/unload/{space-marine-id}:
     post:
       tags: [Starship]
@@ -123,6 +125,8 @@ paths:
               example:
                 code: 404
                 message: Корабль с id=1 не найден
+        '500':
+          $ref: '#/components/responses/InternalServerError'
         '503':
           description: Первый сервис (SpaceMarine Service) недоступен — операция не выполнена
           content:
@@ -199,3 +203,14 @@ components:
         message:
           type: string
           description: Человекочитаемое описание ошибки
+
+  responses:
+    InternalServerError:
+      description: Внутренняя ошибка сервера
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: 500
+            message: Внутренняя ошибка сервера

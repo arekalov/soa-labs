@@ -192,6 +192,8 @@ paths:
                 $ref: '#/components/schemas/SpaceMarinePage'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
     post:
       tags: [SpaceMarine CRUD]
       operationId: createSpaceMarine
@@ -218,6 +220,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /space-marines/{id}:
     parameters:
       - name: id
@@ -246,6 +250,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
     put:
       tags: [SpaceMarine CRUD]
       operationId: updateSpaceMarine
@@ -274,6 +280,8 @@ paths:
           $ref: '#/components/responses/NotFound'
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
     patch:
       tags: [SpaceMarine CRUD]
       operationId: patchSpaceMarine
@@ -303,6 +311,8 @@ paths:
           $ref: '#/components/responses/NotFound'
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
     delete:
       tags: [SpaceMarine CRUD]
       operationId: deleteSpaceMarine
@@ -315,6 +325,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /space-marines/health/min:
     get:
       tags: [SpaceMarine extra]
@@ -339,6 +351,8 @@ paths:
               example:
                 code: 404
                 message: Коллекция пуста
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /space-marines/groups/by-id:
     get:
       tags: [SpaceMarine extra]
@@ -356,6 +370,8 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/IdGroup'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /space-marines/count/by-chapter:
     get:
       tags: [SpaceMarine extra]
@@ -390,6 +406,8 @@ paths:
                 $ref: '#/components/schemas/CountResult'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 components:
   schemas:
     SpaceMarine:
@@ -697,3 +715,12 @@ components:
             details:
               - "coordinates.y: максимальное значение поля — 12"
               - "health: значение должно быть больше 0"
+    InternalServerError:
+      description: Внутренняя ошибка сервера
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: 500
+            message: Внутренняя ошибка сервера
