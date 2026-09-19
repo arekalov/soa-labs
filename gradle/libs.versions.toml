@@ -1,0 +1,39 @@
+[versions]
+kotlin = "2.4.20"
+springBoot = "4.1.1"
+springDepMgmt = "1.1.7"
+jakartaee = "11.0.0"
+postgres = "42.7.7"
+jackson = "2.19.0"
+archunit = "1.5.0"
+junit = "5.14.4"
+assertj = "3.27.0"
+hibernateValidator = "8.0.2.Final"
+expressly = "5.0.0"
+
+[libraries]
+jakartaee-api = { module = "jakarta.platform:jakarta.jakartaee-api", version.ref = "jakartaee" }
+
+jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
+jackson-kotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version.ref = "jackson" }
+jackson-jsr310 = { module = "com.fasterxml.jackson.datatype:jackson-datatype-jsr310", version.ref = "jackson" }
+
+postgresql = { module = "org.postgresql:postgresql", version.ref = "postgres" }
+
+archunit-junit5 = { module = "com.tngtech.archunit:archunit-junit5", version.ref = "archunit" }
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
+# Обязателен явно: иначе Gradle подставит свой launcher, и он разойдётся по версии
+# с движком из BOM — тесты падают с "unaligned versions ... on the classpath".
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+assertj = { module = "org.assertj:assertj-core", version.ref = "assertj" }
+hibernate-validator = { module = "org.hibernate.validator:hibernate-validator", version.ref = "hibernateValidator" }
+expressly = { module = "org.glassfish.expressly:expressly", version.ref = "expressly" }
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-jpa = { id = "org.jetbrains.kotlin.plugin.jpa", version.ref = "kotlin" }
+kotlin-spring = { id = "org.jetbrains.kotlin.plugin.spring", version.ref = "kotlin" }
+kotlin-allopen = { id = "org.jetbrains.kotlin.plugin.allopen", version.ref = "kotlin" }
+spring-boot = { id = "org.springframework.boot", version.ref = "springBoot" }
+spring-depmgmt = { id = "io.spring.dependency-management", version.ref = "springDepMgmt" }
