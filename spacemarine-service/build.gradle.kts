@@ -18,8 +18,12 @@ dependencies {
     // JDBC-драйвер тоже не пакуем — он ставится в сервер модулем, датасорс берётся по JNDI.
     providedCompile(libs.jakartaee.api)
     providedCompile(libs.jackson.databind)
-    providedCompile(libs.jackson.kotlin)
     providedCompile(libs.jackson.jsr310)
+
+    // А вот этот модуль WildFly НЕ предоставляет, поэтому кладём его в WAR.
+    // Без него Jackson не может построить data-класс: у val-свойств нет сеттеров,
+    // а имена параметров конструктора без модуля не видны.
+    implementation(libs.jackson.kotlin)
 
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
