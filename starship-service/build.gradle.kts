@@ -30,6 +30,9 @@ dependencies {
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation(libs.archunit.junit5)
+    // См. комментарий в каталоге версий: без явного launcher'а Gradle подставит свой
+    // и он разойдётся по версии с движком JUnit.
+    testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 // Деплоим bootWar: он содержит SpringBootServletInitializer и разворачивается
