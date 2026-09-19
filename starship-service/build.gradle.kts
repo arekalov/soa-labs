@@ -17,7 +17,17 @@ allOpen {
 }
 
 dependencies {
-    implementation("org.springframework.boot:spring-boot-starter-web")
+    // Встроенный Tomcat исключаем точечно, по группе артефактов.
+    //
+    // Очевидный способ — объявить spring-boot-starter-tomcat как providedRuntime —
+    // здесь ломает сборку: в Spring Boot 4 этот стартер тянет за собой spring-core,
+    // spring-beans, spring-boot и автоконфигурацию, и война складывает ВСЕ транзитивные
+    // зависимости providedRuntime в WEB-INF/lib-provided. Этот каталог в classpath
+    // контейнера не входит, поэтому WAR разворачивался, но Spring в нём не стартовал,
+    // и Tomcat отвечал своей страницей 404 на все пути.
+    implementation("org.springframework.boot:spring-boot-starter-web") {
+        exclude(group = "org.apache.tomcat.embed")
+    }
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     // Без него Jackson не видит параметры конструкторов data-классов и ломается на nullability
@@ -25,8 +35,9 @@ dependencies {
 
     runtimeOnly(libs.postgresql)
 
-    // Контейнер даёт внешний Tomcat — встроенный в WAR не пакуем
-    providedRuntime("org.springframework.boot:spring-boot-starter-tomcat")
+    // Servlet API даёт контейнер; при компиляции он приходил из tomcat-embed-core,
+    // который мы только что исключили.
+    compileOnly("jakarta.servlet:jakarta.servlet-api")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation(libs.archunit.junit5)

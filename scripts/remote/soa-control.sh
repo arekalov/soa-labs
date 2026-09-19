@@ -27,6 +27,17 @@ TOMCAT_HTTPS="${TOMCAT_HTTPS:-24543}"
 
 mkdir -p "$RUN" "$LOGS"
 
+# Ключевая настройка для helios. Здесь rlimit stacksize равен 512 МБ, и под стек
+# каждого нативного потока резервируется именно столько адресного пространства.
+# Две JVM с парой сотен потоков исчерпывают его, после чего fork начинает отказывать
+# с "Resource temporarily unavailable", пул соединений не создаёт свой поток,
+# а Hibernate падает с "Unable to determine Dialect". Ни один из симптомов
+# на настоящую причину не указывает.
+#
+# -Xss задаёт стек только потокам Java; часть служебных потоков берёт размер
+# из rlimit, поэтому ограничиваем и его. Наследуется всеми потомками, включая daemon.
+ulimit -s 8192 2>/dev/null || true
+
 export JAVA_HOME="$JDK"
 export PATH="$JDK/bin:$PATH"
 
@@ -39,6 +50,22 @@ alive() {  # alive <имя>
 
 port_open() {  # port_open <порт>
     nc -z -w 2 127.0.0.1 "$1" >/dev/null 2>&1
+}
+
+# Готовность именно приложения, а не сокета: WildFly открывает порт задолго до того,
+# как заканчивает разворачивать WAR, и в этом промежутке продолжает жадно занимать
+# память. Запуск второй JVM в этот момент приводит к отказу создания потока.
+app_ready() {  # app_ready <порт> <сертификат> <путь>
+    curl -s -o /dev/null --max-time 5 --cacert "$2" "https://127.0.0.1:$1$3" 2>/dev/null
+}
+
+wait_ready() {  # wait_ready <порт> <сертификат> <путь> <попыток>
+    local attempts="${4:-45}"
+    for _ in $(seq 1 "$attempts"); do
+        app_ready "$1" "$2" "$3" && return 0
+        sleep 2
+    done
+    return 1
 }
 
 stop_one() {  # stop_one <имя> <шаблон-пути-экземпляра>
@@ -150,12 +177,25 @@ case "${1:-status}" in
     start)
         echo "Запуск:"
         start_wildfly
+
+        # Серверы поднимаются строго по очереди. Одновременный старт двух JVM
+        # упирается в выделение памяти под стеки потоков: пул соединений не может
+        # создать housekeeper-поток, Hibernate остаётся без метаданных и падает
+        # с "Unable to determine Dialect". Симптом указывает куда угодно, только
+        # не на гонку за ресурсы, поэтому ловится такое долго.
+        #
+        # Ждать открытия порта недостаточно: WildFly слушает задолго до конца
+        # развёртывания. Ждём ответа самого приложения и даём ему устояться.
+        echo "  ждём готовности wildfly перед запуском tomcat..."
+        if wait_ready "$WILDFLY_HTTPS" "$SECRETS/spacemarine.crt" "/space-marines"; then
+            echo "  wildfly отвечает"
+        else
+            echo "  wildfly не ответил вовремя — tomcat всё равно запускаю" >&2
+        fi
+        sleep 5
+
         start_tomcat
-        echo "Ждём готовности..."
-        for _ in $(seq 1 30); do
-            port_open "$WILDFLY_HTTPS" && break
-            sleep 2
-        done
+        wait_ready "$TOMCAT_HTTPS" "$SECRETS/starship.crt" "/starship/create/0/x" >/dev/null
         echo
         show_status
         ;;
