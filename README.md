@@ -31,11 +31,63 @@
 |---|---|---|
 | SpaceMarine Service | Kotlin, JAX-RS | WildFly |
 | Starship Service | Kotlin, Spring MVC REST | Tomcat |
-| Клиентское приложение | Kotlin, Compose Multiplatform (Wasm) | статика на helios |
+| Клиентское приложение | React, TypeScript (Vite) | статика на helios |
 
 Оба сервиса построены по Clean Architecture: домен не зависит ни от JPA, ни от веб-фреймворка, направление зависимостей закреплено архитектурным тестом.
 
 Спецификация из ЛР1 лежит в `docs/` и является контрактом — реализация обязана соответствовать ей строго.
+
+### Структура
+
+```
+spacemarine-service/   JAX-RS, разворачивается на WildFly как ROOT
+starship-service/      Spring MVC, разворачивается на Tomcat как starship.war
+client/                React + TypeScript (Vite), статика
+db/                    DDL и скрипт очистки схемы
+scripts/               развёртывание с ноутбука
+scripts/remote/        настройка и управление серверами, выполняются на helios
+docs/                  спецификация OpenAPI и Swagger UI
+```
+
+### Развёртывание
+
+Первичная настройка сервера выполняется один раз:
+
+```bash
+scp scripts/remote/*.sh ifmo:~/soa/bin/
+ssh ifmo '~/soa/bin/setup-secrets.sh'    # сертификаты, truststore, пароли
+ssh ifmo '~/soa/bin/setup-wildfly.sh'    # экземпляр WildFly: HTTPS, снос HTTP, датасорс
+ssh ifmo '~/soa/bin/setup-tomcat.sh'     # экземпляр Tomcat: только HTTPS-коннектор
+psql -h localhost -U <логин> -d studs -f db/schema.sql
+```
+
+Дальше обычный цикл:
+
+```bash
+./scripts/deploy-services.sh    # собрать и развернуть оба сервиса
+./scripts/deploy-client.sh      # npm run build и выложить клиент
+./scripts/deploy-docs.sh lab2   # выложить Swagger UI
+ssh ifmo '~/soa/bin/soa-control.sh status'
+```
+
+### Доступ
+
+Высокие порты helios закрыты извне, поэтому к сервисам обращаются через SSH-туннель:
+
+```bash
+ssh -N -L 24443:127.0.0.1:24443 -L 24543:127.0.0.1:24543 ifmo
+```
+
+| Что | Адрес |
+|---|---|
+| Клиентское приложение | `https://se.ifmo.ru/~s409449/soa/lab2/client/` |
+| Веб-документация | `https://se.ifmo.ru/~s409449/soa/lab2/` |
+| SpaceMarine Service | `https://localhost:24443` (через туннель) |
+| Starship Service | `https://localhost:24543/starship` (через туннель) |
+
+Сертификаты сервисов самоподписанные: перед первым обращением из браузера их нужно принять, открыв адрес сервиса в отдельной вкладке.
+
+Автозапуска после перезагрузки helios нет — `crontab` студентам запрещён. Перед защитой проверяйте `soa-control.sh status`.
 
 ---
 

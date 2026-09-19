@@ -14,6 +14,8 @@ deploy.env
 build/
 .gradle/
 .kotlin/
+node_modules/
+client/dist/
 
 # IDE
 .idea/
