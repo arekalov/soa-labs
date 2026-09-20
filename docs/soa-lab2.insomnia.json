@@ -10,9 +10,18 @@
       "modified": 0,
       "created": 0,
       "name": "СОА ЛР2 — вариант 73126",
-      "description": "Коллекция запросов к обоим сервисам лабораторной работы №2.\n\nПеред работой:\n1. Поднимите туннель к helios:\n   ssh -N -L 24443:127.0.0.1:24443 -L 24543:127.0.0.1:24543 ifmo\n2. Сертификаты сервисов самоподписанные, поэтому в настройках снимите галочку:\n   Application → Preferences → раздел Request/Response → Validate certificates.\n   В раздел Client Certificates ничего добавлять не нужно: он для взаимного TLS,\n   а сервисы клиентский сертификат не запрашивают.\n\nАдреса и подставляемые идентификаторы лежат в окружении Base Environment.",
+      "description": "Коллекция запросов к обоим сервисам лабораторной работы №2.\n\nПеред работой поднимите туннель к helios:\n   ssh -N -L 24443:127.0.0.1:24443 -L 24543:127.0.0.1:24543 ifmo\n\nСертификаты сервисов самоподписанные. Есть два способа с этим жить:\n\n1. Довериться им. В настройках коллекции (Collection → Settings) поле\n   CA Certificate уже указывает на certs/soa-ca-bundle.pem — файл с обоими\n   сертификатами. Если репозиторий лежит по другому пути, поправьте его там же.\n\n2. Не проверять вовсе: Application → Preferences → раздел Request/Response →\n   снять галочку Validate certificates, затем перезапустить Insomnia.\n\nРаздел Client Certificates не нужен: он предназначен для взаимного TLS,\nа сервисы клиентский сертификат не запрашивают.\n\nАдреса и подставляемые идентификаторы лежат в окружении Base Environment.",
       "scope": "collection",
       "_type": "workspace"
+    },
+    {
+      "_id": "crt_soa_ca",
+      "parentId": "wrk_soa_lab2",
+      "modified": 0,
+      "created": 0,
+      "path": "/Users/arekalov/Yandex.Disk.localized/Itmo/7/SOA/certs/soa-ca-bundle.pem",
+      "disabled": false,
+      "_type": "ca_certificate"
     },
     {
       "_id": "env_base",
