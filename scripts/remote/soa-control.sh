@@ -41,6 +41,16 @@ ulimit -s 8192 2>/dev/null || true
 export JAVA_HOME="$JDK"
 export PATH="$JDK/bin:$PATH"
 
+# Общие флаги обеих JVM. Ограничение по числу потоков на пользователя здесь
+# упирается уже не в память, а в счётчик: pthread_create отказывает с EAGAIN
+# при стеке в 1 МБ. Размеры пулов — GC, JIT, воркеры Undertow и Tomcat — JVM
+# выводит из числа ядер, а их у helios десятки. Говорим ей, что ядра два:
+# все внутренние пулы ужимаются, а для лабораторной нагрузки этого с запасом.
+# SerialGC вдобавок не создаёт потоков сборщика вовсе.
+JVM_OPTS="-Xms64m -Xmx512m -Xss512k"
+JVM_OPTS="$JVM_OPTS -XX:ActiveProcessorCount=2 -XX:+UseSerialGC -XX:CICompilerCount=2"
+JVM_OPTS="$JVM_OPTS -Djava.net.preferIPv4Stack=true -Dfile.encoding=UTF-8"
+
 # --------------------------------------------------------------------- утилиты
 
 alive() {  # alive <имя>
@@ -124,7 +134,7 @@ start_wildfly() {
     # нативного потока. Пулы WildFly упираются в datasize уже на десятке потоков
     # и валятся с "OutOfMemoryError: unable to create native thread", из-за чего
     # молча не стартуют подсистемы JCA и JPA, то есть датасорс.
-    JAVA_OPTS="-Xms64m -Xmx512m -Xss512k -Djava.net.preferIPv4Stack=true -Dfile.encoding=UTF-8" \
+    JAVA_OPTS="$JVM_OPTS" \
     /usr/sbin/daemon -r -f \
         -P "$RUN/wildfly.sup.pid" -p "$RUN/wildfly.pid" \
         -o "$LOGS/wildfly.out" \
@@ -148,7 +158,7 @@ start_tomcat() {
     # Именно `catalina.sh run` (foreground): при `start` Tomcat форкается сам,
     # daemon потеряет процесс и pid-файл станет бесполезен.
     CATALINA_HOME="$TOMCAT_HOME" CATALINA_BASE="$TOMCAT_BASE" \
-    CATALINA_OPTS="-Xms64m -Xmx512m -Xss512k -Djava.net.preferIPv4Stack=true -Dfile.encoding=UTF-8" \
+    CATALINA_OPTS="$JVM_OPTS" \
     /usr/sbin/daemon -r -f \
         -P "$RUN/tomcat-starship.sup.pid" -p "$RUN/tomcat-starship.pid" \
         -o "$LOGS/tomcat-starship.out" \
