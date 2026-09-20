@@ -1,4 +1,4 @@
-cd client && npm run devpackage ru.ifmo.soa.starship.application.usecase
+package ru.ifmo.soa.starship.application.usecase
 
 import ru.ifmo.soa.starship.application.error.InvalidParameterException
 import ru.ifmo.soa.starship.application.error.SpaceMarineNotFoundException
