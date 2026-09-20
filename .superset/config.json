@@ -1,0 +1,5 @@
+{
+  "setup": ["cp \"$SUPERSET_ROOT_PATH/deploy.sh\" deploy.sh 2>/dev/null || true"],
+  "teardown": [],
+  "run": ["python3 -m http.server \"${PORT:-8000}\" --directory docs"]
+}

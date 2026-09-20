@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Без этого Tomcat отвечает 302 на запрос к корню контекста (/starship без слэша),
+  а спецификация описывает именно такой путь для списка и создания.
+-->
+<Context mapperContextRootRedirectEnabled="false"/>
