@@ -109,8 +109,12 @@ Starship Service (`/starship`):
 включая проверки кодов 400, 404, 405, 409, 422 и 503. Импорт: Application → Preferences →
 Data → Import Data → From File.
 
-Адреса и подставляемые идентификаторы лежат в окружении `Base Environment`. Сертификаты
-самоподписанные, поэтому в Preferences → Request нужно снять галочку Validate certificates.
+Адреса и подставляемые идентификаторы лежат в окружении `Base Environment`.
+
+Сертификаты сервисов самоподписанные, поэтому в Insomnia нужно снять галочку
+Application → Preferences → Request/Response → Validate certificates. В раздел
+Client Certificates ничего добавлять не нужно: он предназначен для взаимного TLS,
+а сервисы клиентский сертификат не запрашивают.
 
 ### Развёртывание
 
