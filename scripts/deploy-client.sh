@@ -9,7 +9,7 @@ set -euo pipefail
 cd "$(dirname "$0")/../client"
 
 SSH_HOST="${SSH_HOST:-ifmo}"
-REMOTE_DIR="${REMOTE_DIR:-public_html/soa/lab2/client}"
+REMOTE_DIR="${REMOTE_DIR:-public_html/soa/lab2}"
 DIST="dist"
 
 echo "==> Ставлю зависимости и собираю клиент"
@@ -19,18 +19,17 @@ npm run build
 [ -f "$DIST/index.html" ] || { echo "В сборке нет index.html" >&2; exit 1; }
 echo "==> Размер сборки: $(du -sh "$DIST" | cut -f1)"
 
-# Копируем во временный каталог и подменяем одним движением: иначе посетитель,
-# зашедший в момент заливки, получит наполовину обновлённое приложение.
+# Каталог лабораторной общий: рядом может лежать docs/ со Swagger UI. Поэтому
+# подменяем только свои файлы, а не каталог целиком. Сначала ассеты (у них
+# хешированные имена, старые и новые не пересекаются), затем index.html.
 echo "==> Копирую"
-ssh "$SSH_HOST" "rm -rf ~/$REMOTE_DIR.new && mkdir -p ~/$REMOTE_DIR.new"
-scp -qr "$DIST/." "$SSH_HOST:~/$REMOTE_DIR.new/"
+ssh "$SSH_HOST" "mkdir -p ~/$REMOTE_DIR && rm -rf ~/$REMOTE_DIR/assets"
+scp -qr "$DIST/assets" "$SSH_HOST:~/$REMOTE_DIR/assets"
+scp -q "$DIST/index.html" "$SSH_HOST:~/$REMOTE_DIR/index.html"
 ssh "$SSH_HOST" "
-  rm -rf ~/$REMOTE_DIR.old
-  [ -d ~/$REMOTE_DIR ] && mv ~/$REMOTE_DIR ~/$REMOTE_DIR.old
-  mv ~/$REMOTE_DIR.new ~/$REMOTE_DIR
-  rm -rf ~/$REMOTE_DIR.old
-  find ~/$REMOTE_DIR -type d -exec chmod 755 {} \;
-  find ~/$REMOTE_DIR -type f -exec chmod 644 {} \;
+  chmod 711 ~ && chmod 755 ~/public_html ~/public_html/soa
+  find ~/$REMOTE_DIR -type d -exec chmod 755 {} \\;
+  find ~/$REMOTE_DIR -type f -exec chmod 644 {} \\;
 "
 
-echo "==> Готово: https://se.ifmo.ru/~s409449/soa/lab2/client/"
+echo "==> Готово: https://se.ifmo.ru/~s409449/soa/lab2/"

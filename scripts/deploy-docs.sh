@@ -4,8 +4,10 @@
 #
 #   ./scripts/deploy-docs.sh [lab2]
 #
-# Наследник deploy.sh из ЛР1. Отличий два: имя лабораторной стало параметром,
-# и появилась проверка этого имени.
+# Наследник deploy.sh из ЛР1. Отличий три: имя лабораторной стало параметром,
+# появилась проверка этого имени, а документация кладётся в подкаталог docs/ —
+# корень каталога лабораторной занимает клиентское приложение.
+# ЛР1 остаётся там, куда её выложил старый скрипт (soa/lab1), и не трогается.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -20,7 +22,7 @@ case "$LAB" in
   *) echo "Отказ: недопустимое имя лабораторной «$LAB» (ожидается вида lab2)" >&2; exit 1 ;;
 esac
 
-REMOTE_DIR="public_html/soa/$LAB"
+REMOTE_DIR="public_html/soa/$LAB/docs"
 
 [ -d docs ] || { echo "Не найден каталог docs/" >&2; exit 1; }
 
@@ -41,4 +43,4 @@ ssh "$SSH_HOST" "
   find ~/$REMOTE_DIR -type f -exec chmod 644 {} \;
 "
 
-echo "==> Готово: https://se.ifmo.ru/~s409449/soa/$LAB/"
+echo "==> Готово: https://se.ifmo.ru/~s409449/soa/$LAB/docs/"

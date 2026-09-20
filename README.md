@@ -80,8 +80,8 @@ ssh -N -L 24443:127.0.0.1:24443 -L 24543:127.0.0.1:24543 ifmo
 
 | Что | Адрес |
 |---|---|
-| Клиентское приложение | `https://se.ifmo.ru/~s409449/soa/lab2/client/` |
-| Веб-документация | `https://se.ifmo.ru/~s409449/soa/lab2/` |
+| Клиентское приложение | `https://se.ifmo.ru/~s409449/soa/lab2/` |
+| Веб-документация | `https://se.ifmo.ru/~s409449/soa/lab2/docs/` |
 | SpaceMarine Service | `https://localhost:24443` (через туннель) |
 | Starship Service | `https://localhost:24543/starship` (через туннель) |
 
