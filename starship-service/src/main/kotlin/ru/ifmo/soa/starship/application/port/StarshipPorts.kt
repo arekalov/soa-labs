@@ -25,6 +25,9 @@ interface StarshipRepository {
     fun deleteById(id: Long): Boolean
 
     fun list(query: StarshipQuery): Page<Starship>
+
+    /** Корабль, на борту которого находится десантник, или `null`. Десантник бывает только на одном корабле. */
+    fun findByMarine(spaceMarineId: Int): Starship?
 }
 
 /**

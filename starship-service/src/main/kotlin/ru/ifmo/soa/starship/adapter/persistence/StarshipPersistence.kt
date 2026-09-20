@@ -18,6 +18,7 @@ import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor
 import org.springframework.stereotype.Repository
 import org.springframework.transaction.annotation.Transactional
+import ru.ifmo.soa.starship.application.error.SpaceMarineAlreadyOnBoardException
 import ru.ifmo.soa.starship.application.error.StarshipAlreadyExistsException
 import ru.ifmo.soa.starship.application.port.StarshipRepository
 import ru.ifmo.soa.starship.application.query.Page
@@ -101,8 +102,27 @@ class JpaStarshipRepository(
         }
         entity.name = starship.name
         entity.marines = starship.marines.toMutableSet()
-        return jpa.save(entity).toDomain()
+        return try {
+            jpa.saveAndFlush(entity).toDomain()
+        } catch (_: DataIntegrityViolationException) {
+            // Гонка двух посадок одного десантника: уникальный индекс по space_marine_id
+            // отверг вторую. Находим, на каком корабле он оказался, и отвечаем конфликтом.
+            val marine = starship.marines.firstOrNull { findByMarine(it)?.id != starship.id }
+                ?: throw IllegalStateException("Нарушение целостности без конфликта по десантнику")
+            throw SpaceMarineAlreadyOnBoardException(requireNotNull(findByMarine(marine)).id, marine)
+        }
     }
+
+    @Transactional(readOnly = true)
+    override fun findByMarine(spaceMarineId: Int): Starship? =
+        em.createQuery(
+            "select s from StarshipEntity s join s.marines m where m = :marine",
+            StarshipEntity::class.java,
+        )
+            .setParameter("marine", spaceMarineId)
+            .resultList
+            .firstOrNull()
+            ?.toDomain()
 
     @Transactional
     override fun deleteById(id: Long): Boolean {

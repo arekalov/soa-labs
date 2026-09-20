@@ -75,7 +75,7 @@ Starship Service (`/starship`):
 | `PATCH /starship/{id}` | переименовать |
 | `DELETE /starship/{id}` | удалить |
 | `POST /starship/create/{id}/{name}` | создать с заданным идентификатором (ЛР1) |
-| `POST /starship/{starship-id}/board/{space-marine-id}` | посадить десантника; существование проверяется в первом сервисе |
+| `POST /starship/{starship-id}/board/{space-marine-id}` | посадить десантника; существование проверяется в первом сервисе, на другом корабле он быть не должен (409) |
 | `POST /starship/{starship-id}/unload/{space-marine-id}` | высадить десантника (ЛР1) |
 
 ### Развёртывание
@@ -90,7 +90,7 @@ ssh ifmo '~/soa/bin/setup-tomcat.sh'     # экземпляр Tomcat: тольк
 psql -h localhost -U <логин> -d studs -f db/schema.sql
 ```
 
-Если схема создавалась до появления `POST /starship`, один раз примените `db/migrate-001-starship-identity.sql`.
+Если схема создавалась раньше, один раз примените миграции `db/migrate-*.sql` по порядку.
 
 Дальше обычный цикл:
 

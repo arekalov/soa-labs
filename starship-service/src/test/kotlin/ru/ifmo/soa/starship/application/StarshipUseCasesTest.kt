@@ -20,6 +20,8 @@ import ru.ifmo.soa.starship.application.query.StarshipQuery
 import ru.ifmo.soa.starship.application.usecase.BoardSpaceMarine
 import ru.ifmo.soa.starship.application.usecase.CreateStarship
 import ru.ifmo.soa.starship.application.usecase.CreateStarshipWithGeneratedId
+import ru.ifmo.soa.starship.application.usecase.CrewReconciler
+import ru.ifmo.soa.starship.application.usecase.GetStarship
 import ru.ifmo.soa.starship.application.usecase.ListStarships
 import ru.ifmo.soa.starship.application.usecase.UnloadSpaceMarine
 import ru.ifmo.soa.starship.domain.model.Starship
@@ -47,6 +49,7 @@ class StarshipUseCasesTest {
             return starship
         }
 
+        override fun findByMarine(spaceMarineId: Int): Starship? = storage.values.firstOrNull { spaceMarineId in it.marines }
         override fun nextId(): Long = (storage.keys.maxOrNull() ?: 0L) + 1
         override fun deleteById(id: Long): Boolean = storage.remove(id) != null
         override fun list(query: StarshipQuery): Page<Starship> {
@@ -125,12 +128,49 @@ class StarshipUseCasesTest {
     @DisplayName("список фильтруется по точному совпадению id и названия")
     fun `list applies exact filters`() {
         val repository = FakeRepository(Starship(1L, "Alpha"), Starship(2L, "Beta"), Starship(3L, "Alpha"))
-        val list = ListStarships(repository)
+        val list = ListStarships(repository, CrewReconciler(repository, FakeGateway()))
 
         assertThat(list.execute(StarshipQuery(filter = StarshipFilter(name = "Alpha"))).items.map { it.id })
             .containsExactly(1L, 3L)
         assertThat(list.execute(StarshipQuery(filter = StarshipFilter(id = 2L, name = "Alpha"))).items).isEmpty()
         assertThat(list.execute(StarshipQuery()).totalElements).isEqualTo(3L)
+    }
+
+    // ------------------------------------------------------------- сверка экипажа
+
+    @Test
+    @DisplayName("удалённый в первом сервисе десантник снимается с борта при чтении корабля")
+    fun `reading drops marines that no longer exist`() {
+        val repository = FakeRepository(Starship(1L, "Ship", setOf(10, 20)))
+        val gateway = FakeGateway(known = setOf(10))
+
+        val ship = GetStarship(repository, CrewReconciler(repository, gateway)).execute(1L)
+
+        assertThat(ship.marines).containsExactly(10)
+        assertThat(repository.saved?.marines).containsExactly(10)
+        assertThat(gateway.calls).isEqualTo(2)
+    }
+
+    @Test
+    @DisplayName("если состав актуален, ничего не сохраняется")
+    fun `reading an intact crew writes nothing`() {
+        val repository = FakeRepository(Starship(1L, "Ship", setOf(10)))
+
+        GetStarship(repository, CrewReconciler(repository, FakeGateway(known = setOf(10)))).execute(1L)
+
+        assertThat(repository.saved).isNull()
+    }
+
+    @Test
+    @DisplayName("при недоступном первом сервисе корабль читается как есть")
+    fun `reading survives upstream outage`() {
+        val repository = FakeRepository(Starship(1L, "Ship", setOf(10, 20)))
+        val gateway = FakeGateway(failure = SpaceMarineServiceUnavailableException("недоступен"))
+
+        val page = ListStarships(repository, CrewReconciler(repository, gateway)).execute(StarshipQuery())
+
+        assertThat(page.items.single().marines).containsExactlyInAnyOrder(10, 20)
+        assertThat(repository.saved).isNull()
     }
 
     // ------------------------------------------------------------- посадка
@@ -156,6 +196,21 @@ class StarshipUseCasesTest {
             .isInstanceOf(SpaceMarineAlreadyOnBoardException::class.java)
         assertThatThrownBy { BoardSpaceMarine(repository, FakeGateway()).execute(1L, 8) }
             .isInstanceOf(SpaceMarineNotFoundException::class.java)
+    }
+
+    @Test
+    @DisplayName("десантник с другого корабля не садится: конфликт называет корабль, где он сейчас")
+    fun `marine cannot be on two ships at once`() {
+        val repository = FakeRepository(Starship(1L, "Alpha", setOf(7)), Starship(2L, "Beta"))
+        val gateway = FakeGateway(known = setOf(7))
+
+        assertThatThrownBy { BoardSpaceMarine(repository, gateway).execute(2L, 7) }
+            .isInstanceOf(SpaceMarineAlreadyOnBoardException::class.java)
+            .hasMessageContaining("корабле с id=1")
+
+        // Конфликт виден по своей базе — до первого сервиса дело не доходит
+        assertThat(gateway.calls).isZero()
+        assertThat(repository.storage[2L]?.marines).isEmpty()
     }
 
     // ------------------------------------------------------------- высадка

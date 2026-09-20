@@ -64,5 +64,8 @@ CREATE TABLE starship_marine (
     boarded_at      timestamp(3) with time zone NOT NULL DEFAULT now(),
 
     PRIMARY KEY (starship_id, space_marine_id),
+    -- Десантник может быть только на одном корабле; сервис проверяет это до записи,
+    -- а индекс закрывает гонку двух одновременных посадок.
+    CONSTRAINT uq_ship_marine_single UNIQUE (space_marine_id),
     CONSTRAINT ck_ship_marine_ref CHECK (space_marine_id > 0)
 );

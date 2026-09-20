@@ -40,6 +40,8 @@ export function StarshipsPage({ client }: { client: SoaClient }) {
 
   /** Десантники первого сервиса — для выбора при посадке и подписей в экипаже. */
   const [marines, setMarines] = useState<SpaceMarineDto[]>([]);
+  /** Кто уже на каком-то корабле: десантник может быть только на одном. */
+  const [boarded, setBoarded] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     let cancelled = false;
@@ -63,6 +65,9 @@ export function StarshipsPage({ client }: { client: SoaClient }) {
     let cancelled = false;
     void client.listMarines({}, ['id'], 0, 100).then((r) => {
       if (!cancelled && r.ok) setMarines(r.value.items);
+    });
+    void client.listStarships({}, [], 0, 100).then((r) => {
+      if (!cancelled && r.ok) setBoarded(new Set(r.value.items.flatMap((s) => s.marines)));
     });
     return () => {
       cancelled = true;
@@ -195,7 +200,7 @@ export function StarshipsPage({ client }: { client: SoaClient }) {
     </div>
   );
 
-  const freeMarines = (ship: StarshipDto) => marines.filter((m) => !ship.marines.includes(m.id));
+  const freeMarines = () => marines.filter((m) => !boarded.has(m.id));
 
   return (
     <>
@@ -393,7 +398,7 @@ export function StarshipsPage({ client }: { client: SoaClient }) {
                 <SelectField
                   label={S.ship.marineToBoard}
                   value={candidate}
-                  options={[{ value: '', label: S.common.empty }, ...freeMarines(modal.ship).map((m) => ({ value: String(m.id), label: marineLabel(m.id) }))]}
+                  options={[{ value: '', label: S.common.empty }, ...freeMarines().map((m) => ({ value: String(m.id), label: marineLabel(m.id) }))]}
                   onChange={setCandidate}
                 />
               </div>

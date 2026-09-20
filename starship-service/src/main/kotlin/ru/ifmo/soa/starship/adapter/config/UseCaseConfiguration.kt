@@ -6,6 +6,7 @@ import ru.ifmo.soa.starship.application.port.SpaceMarineGateway
 import ru.ifmo.soa.starship.application.port.StarshipRepository
 import ru.ifmo.soa.starship.application.usecase.BoardSpaceMarine
 import ru.ifmo.soa.starship.application.usecase.CreateStarship
+import ru.ifmo.soa.starship.application.usecase.CrewReconciler
 import ru.ifmo.soa.starship.application.usecase.CreateStarshipWithGeneratedId
 import ru.ifmo.soa.starship.application.usecase.DeleteStarship
 import ru.ifmo.soa.starship.application.usecase.GetStarship
@@ -27,9 +28,12 @@ class UseCaseConfiguration {
 
     @Bean fun createStarshipWithGeneratedId(repository: StarshipRepository) = CreateStarshipWithGeneratedId(repository)
 
-    @Bean fun listStarships(repository: StarshipRepository) = ListStarships(repository)
+    @Bean fun crewReconciler(repository: StarshipRepository, spaceMarines: SpaceMarineGateway) =
+        CrewReconciler(repository, spaceMarines)
 
-    @Bean fun getStarship(repository: StarshipRepository) = GetStarship(repository)
+    @Bean fun listStarships(repository: StarshipRepository, crew: CrewReconciler) = ListStarships(repository, crew)
+
+    @Bean fun getStarship(repository: StarshipRepository, crew: CrewReconciler) = GetStarship(repository, crew)
 
     @Bean fun renameStarship(repository: StarshipRepository) = RenameStarship(repository)
 

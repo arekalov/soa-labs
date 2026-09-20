@@ -3,6 +3,7 @@ package ru.ifmo.soa.starship.application.usecase
 import ru.ifmo.soa.starship.application.error.InvalidParameterException
 import ru.ifmo.soa.starship.application.error.SpaceMarineAlreadyOnBoardException
 import ru.ifmo.soa.starship.application.error.SpaceMarineNotFoundException
+import ru.ifmo.soa.starship.application.error.SpaceMarineServiceUnavailableException
 import ru.ifmo.soa.starship.application.error.SpaceMarineNotOnBoardException
 import ru.ifmo.soa.starship.application.error.StarshipAlreadyExistsException
 import ru.ifmo.soa.starship.application.error.StarshipNotFoundException
@@ -63,18 +64,46 @@ class CreateStarshipWithGeneratedId(
         repository.create(Starship(id = repository.nextId(), name = requireName(name)))
 }
 
+/**
+ * Сверка экипажа с первым сервисом.
+ *
+ * Внешнего ключа между сервисами нет, и об удалении десантника нас никто не известит.
+ * Поэтому при чтении корабля состав проверяется, исчезнувшие десантники снимаются с борта,
+ * и результат сохраняется. Если первый сервис недоступен, экипаж отдаётся как есть:
+ * чтение не должно ломаться из-за чужого простоя.
+ */
+class CrewReconciler(
+    private val repository: StarshipRepository,
+    private val spaceMarines: SpaceMarineGateway,
+) {
+    fun reconcile(starship: Starship): Starship {
+        val alive = try {
+            starship.marines.filter { spaceMarines.exists(it) }.toSet()
+        } catch (_: SpaceMarineServiceUnavailableException) {
+            return starship
+        }
+        if (alive.size == starship.marines.size) return starship
+        return repository.save(starship.copy(marines = alive))
+    }
+}
+
 class ListStarships(
     private val repository: StarshipRepository,
+    private val crew: CrewReconciler,
 ) {
-    fun execute(query: StarshipQuery): Page<Starship> = repository.list(query)
+    fun execute(query: StarshipQuery): Page<Starship> {
+        val page = repository.list(query)
+        return page.copy(items = page.items.map(crew::reconcile))
+    }
 }
 
 class GetStarship(
     private val repository: StarshipRepository,
+    private val crew: CrewReconciler,
 ) {
     fun execute(id: Long): Starship {
         requirePositive(id, "id")
-        return repository.findById(id) ?: throw StarshipNotFoundException(id)
+        return crew.reconcile(repository.findById(id) ?: throw StarshipNotFoundException(id))
     }
 }
 
@@ -107,8 +136,9 @@ class BoardSpaceMarine(
         requirePositive(spaceMarineId.toLong(), "space-marine-id")
 
         val starship = repository.findById(starshipId) ?: throw StarshipNotFoundException(starshipId)
-        if (starship.hasOnBoard(spaceMarineId)) {
-            throw SpaceMarineAlreadyOnBoardException(starshipId, spaceMarineId)
+        // Десантник — один человек, быть на двух кораблях сразу он не может: и на этом, и на любом другом.
+        repository.findByMarine(spaceMarineId)?.let { occupied ->
+            throw SpaceMarineAlreadyOnBoardException(occupied.id, spaceMarineId)
         }
         // Десантник должен существовать в первом сервисе — иначе на борту оказался бы фантом.
         if (!spaceMarines.exists(spaceMarineId)) {
