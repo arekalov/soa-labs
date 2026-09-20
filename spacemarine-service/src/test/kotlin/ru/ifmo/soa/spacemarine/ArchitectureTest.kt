@@ -2,16 +2,13 @@ package ru.ifmo.soa.spacemarine
 
 import com.tngtech.archunit.core.importer.ClassFileImporter
 import com.tngtech.archunit.core.importer.ImportOption
-import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
+import com.tngtech.archunit.library.Architectures.layeredArchitecture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 
 /**
- * Направление зависимостей закреплено тестом, а не договорённостью.
- *
- * Без такой проверки слоистость разъезжается на второй неделе: достаточно одного импорта
- * JPA в домене, чтобы бизнес-правила стало невозможно проверить без базы. На защите
- * этот тест — предъявляемый аргумент, а не обещание.
+ * Слои проверяются механически: договорённость, которую нельзя нарушить незаметно,
+ * стоит дороже той, что записана только в README.
  */
 class ArchitectureTest {
 
@@ -20,52 +17,43 @@ class ArchitectureTest {
         .importPackages("ru.ifmo.soa.spacemarine")
 
     @Test
-    @DisplayName("домен не знает ни о JPA, ни о веб-слое, ни о Jackson")
-    fun `domain is free of frameworks`() {
-        noClasses()
-            .that().resideInAPackage("..domain..")
-            .should().dependOnClassesThat().resideInAnyPackage(
-                "jakarta.persistence..",
-                "jakarta.ws.rs..",
-                "jakarta.enterprise..",
-                "com.fasterxml.jackson..",
-                "org.hibernate..",
-            )
-            .because("доменные правила обязаны проверяться без контейнера и базы")
+    @DisplayName("зависимости идут сверху вниз: контроллер → сервис → репозиторий")
+    fun `layers depend downwards only`() {
+        layeredArchitecture().consideringOnlyDependenciesInLayers()
+            .layer("Контроллеры").definedBy("..controller..")
+            .layer("Сервисы").definedBy("..service..")
+            .layer("Репозитории").definedBy("..repository..")
+            .whereLayer("Контроллеры").mayNotBeAccessedByAnyLayer()
+            .whereLayer("Сервисы").mayOnlyBeAccessedByLayers("Контроллеры")
+            .whereLayer("Репозитории").mayOnlyBeAccessedByLayers("Сервисы")
             .check(classes)
     }
 
     @Test
-    @DisplayName("домен не зависит от внешних слоёв")
-    fun `domain does not depend on outer layers`() {
-        noClasses()
-            .that().resideInAPackage("..domain..")
-            .should().dependOnClassesThat().resideInAnyPackage("..application..", "..adapter..")
-            .because("зависимости направлены только внутрь")
+    @DisplayName("модель не знает ни о вебе, ни о транспортных типах")
+    fun `model stays independent`() {
+        com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses()
+            .that().resideInAPackage("..model..")
+            .should().dependOnClassesThat()
+            .resideInAnyPackage("..controller..", "..dto..", "..service..", "..repository..", "jakarta.ws.rs..")
             .check(classes)
     }
 
     @Test
-    @DisplayName("прикладной слой не зависит от адаптеров и не знает о JPA и HTTP")
-    fun `application does not depend on adapters`() {
-        noClasses()
-            .that().resideInAPackage("..application..")
-            .should().dependOnClassesThat().resideInAnyPackage(
-                "..adapter..",
-                "jakarta.persistence..",
-                "jakarta.ws.rs..",
-            )
-            .because("сценарии работают с портами, а не с конкретными технологиями")
+    @DisplayName("сервис не зависит от JAX-RS: веб — деталь доставки, а не бизнес-правило")
+    fun `service is free of web types`() {
+        com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses()
+            .that().resideInAPackage("..service..")
+            .should().dependOnClassesThat().resideInAnyPackage("jakarta.ws.rs..", "..controller..")
             .check(classes)
     }
 
     @Test
-    @DisplayName("веб-слой не обращается к персистентности напрямую")
-    fun `web does not reach into persistence`() {
-        noClasses()
-            .that().resideInAPackage("..adapter.web..")
-            .should().dependOnClassesThat().resideInAPackage("..adapter.persistence..")
-            .because("веб общается с приложением через сценарии, а не через хранилище")
+    @DisplayName("транспортные типы не протекают в репозиторий")
+    fun `repository does not speak dto`() {
+        com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses()
+            .that().resideInAPackage("..repository..")
+            .should().dependOnClassesThat().resideInAnyPackage("..dto..", "..controller..")
             .check(classes)
     }
 }

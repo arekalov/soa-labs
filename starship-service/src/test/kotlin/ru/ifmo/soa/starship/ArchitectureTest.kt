@@ -3,14 +3,10 @@ package ru.ifmo.soa.starship
 import com.tngtech.archunit.core.importer.ClassFileImporter
 import com.tngtech.archunit.core.importer.ImportOption
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
+import com.tngtech.archunit.library.Architectures.layeredArchitecture
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 
-/**
- * Во втором сервисе планка выше, чем в первом: прикладной слой не должен зависеть
- * даже от Spring. Именно ради этого бины объявлены отдельной конфигурацией
- * в адаптере, а не аннотациями на самих сценариях.
- */
 class ArchitectureTest {
 
     private val classes = ClassFileImporter()
@@ -18,53 +14,46 @@ class ArchitectureTest {
         .importPackages("ru.ifmo.soa.starship")
 
     @Test
-    @DisplayName("домен не знает ни о JPA, ни о Spring, ни о Jackson")
-    fun `domain is free of frameworks`() {
-        noClasses()
-            .that().resideInAPackage("..domain..")
-            .should().dependOnClassesThat().resideInAnyPackage(
-                "jakarta.persistence..",
-                "org.springframework..",
-                "com.fasterxml.jackson..",
-            )
-            .because("доменные правила обязаны проверяться без контейнера и базы")
+    @DisplayName("зависимости идут сверху вниз: контроллер → сервис → репозиторий и клиент")
+    fun `layers depend downwards only`() {
+        layeredArchitecture().consideringOnlyDependenciesInLayers()
+            .layer("Контроллеры").definedBy("..controller..")
+            .layer("Сервисы").definedBy("..service..")
+            .layer("Репозитории").definedBy("..repository..")
+            .layer("Клиенты").definedBy("..client..")
+            .whereLayer("Контроллеры").mayNotBeAccessedByAnyLayer()
+            .whereLayer("Сервисы").mayOnlyBeAccessedByLayers("Контроллеры")
+            .whereLayer("Репозитории").mayOnlyBeAccessedByLayers("Сервисы")
+            .whereLayer("Клиенты").mayOnlyBeAccessedByLayers("Сервисы")
             .check(classes)
     }
 
     @Test
-    @DisplayName("сценарии не зависят от Spring и не знают о деталях хранения и транспорта")
-    fun `application is framework free`() {
+    @DisplayName("модель не знает ни о вебе, ни о транспортных типах")
+    fun `model stays independent`() {
         noClasses()
-            .that().resideInAPackage("..application..")
-            .should().dependOnClassesThat().resideInAnyPackage(
-                "org.springframework..",
-                "jakarta.persistence..",
-                "..adapter..",
-            )
-            .because("сценарии работают с портами; бины объявлены конфигурацией в адаптере")
+            .that().resideInAPackage("..model..")
+            .should().dependOnClassesThat()
+            .resideInAnyPackage("..controller..", "..dto..", "..service..", "..repository..", "org.springframework..")
             .check(classes)
     }
 
     @Test
-    @DisplayName("домен не зависит от внешних слоёв")
-    fun `domain does not depend on outer layers`() {
+    @DisplayName("сервис не зависит от Spring MVC: веб — деталь доставки")
+    fun `service is free of web types`() {
         noClasses()
-            .that().resideInAPackage("..domain..")
-            .should().dependOnClassesThat().resideInAnyPackage("..application..", "..adapter..")
-            .because("зависимости направлены только внутрь")
+            .that().resideInAPackage("..service..")
+            .should().dependOnClassesThat()
+            .resideInAnyPackage("org.springframework.web..", "org.springframework.http..", "..controller..")
             .check(classes)
     }
 
     @Test
-    @DisplayName("веб не обращается к персистентности и к клиенту напрямую")
-    fun `web goes through use cases`() {
+    @DisplayName("транспортные типы не протекают в репозиторий")
+    fun `repository does not speak dto`() {
         noClasses()
-            .that().resideInAPackage("..adapter.web..")
-            .should().dependOnClassesThat().resideInAnyPackage(
-                "..adapter.persistence..",
-                "..adapter.client..",
-            )
-            .because("контроллер вызывает сценарии, а не адаптеры напрямую")
+            .that().resideInAPackage("..repository..")
+            .should().dependOnClassesThat().resideInAnyPackage("..dto..", "..controller..")
             .check(classes)
     }
 }

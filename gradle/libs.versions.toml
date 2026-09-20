@@ -8,6 +8,7 @@ jackson = "2.19.0"
 archunit = "1.5.0"
 junit = "5.14.4"
 assertj = "3.27.0"
+mockitoKotlin = "5.4.0"
 hibernateValidator = "8.0.2.Final"
 expressly = "5.0.0"
 
@@ -29,6 +30,7 @@ junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher
 hibernate-validator = { module = "org.hibernate.validator:hibernate-validator", version.ref = "hibernateValidator" }
 
 assertj = { module = "org.assertj:assertj-core", version.ref = "assertj" }
+mockito-kotlin = { module = "org.mockito.kotlin:mockito-kotlin", version.ref = "mockitoKotlin" }
 expressly = { module = "org.glassfish.expressly:expressly", version.ref = "expressly" }
 
 [plugins]
