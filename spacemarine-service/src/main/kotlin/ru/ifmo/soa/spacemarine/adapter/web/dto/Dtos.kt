@@ -70,12 +70,6 @@ data class SpaceMarinePageDto(
     val totalPages: Int,
 )
 
-/** Группа по `id`. Схема `IdGroup`. */
-data class IdGroupDto(
-    val id: Int,
-    val count: Long,
-)
-
 /** Результат подсчёта. Схема `CountResult`. */
 data class CountResultDto(
     val count: Long,

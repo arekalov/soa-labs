@@ -9,7 +9,6 @@ import jakarta.persistence.criteria.Path
 import jakarta.persistence.criteria.Predicate
 import jakarta.persistence.criteria.Root
 import ru.ifmo.soa.spacemarine.application.port.SpaceMarineRepository
-import ru.ifmo.soa.spacemarine.application.query.IdGroup
 import ru.ifmo.soa.spacemarine.application.query.Page
 import ru.ifmo.soa.spacemarine.application.query.SpaceMarineField
 import ru.ifmo.soa.spacemarine.application.query.SpaceMarineQuery
@@ -80,37 +79,6 @@ open class JpaSpaceMarineRepository : SpaceMarineRepository {
         return Page(items, query.page, query.size, total)
     }
 
-    override fun findWithMinHealth(): SpaceMarine? {
-        val cb = em.criteriaBuilder
-        val cq = cb.createQuery(SpaceMarineEntity::class.java)
-        val root = cq.from(SpaceMarineEntity::class.java)
-        cq.select(root).orderBy(cb.asc(root.get<Float>("health")), cb.asc(root.get<Int>("id")))
-
-        return em.createQuery(cq)
-            .setMaxResults(1)
-            .resultList
-            .firstOrNull()
-            ?.let(SpaceMarineEntityMapper::toDomain)
-    }
-
-    override fun groupById(): List<IdGroup> {
-        val cb = em.criteriaBuilder
-        val cq = cb.createTupleQuery()
-        val root = cq.from(SpaceMarineEntity::class.java)
-        val idPath = root.get<Int>("id")
-
-        cq.select(cb.tuple(idPath, cb.count(root)))
-            .groupBy(idPath)
-            .orderBy(cb.asc(idPath))
-
-        return em.createQuery(cq).resultList.map { tuple ->
-            IdGroup(
-                id = tuple.get(0, Int::class.javaObjectType),
-                count = tuple.get(1, Long::class.javaObjectType),
-            )
-        }
-    }
-
     override fun countByChapter(name: String, parentLegion: String?): Long {
         val cb = em.criteriaBuilder
         val cq = cb.createQuery(Long::class.javaObjectType)
@@ -128,6 +96,27 @@ open class JpaSpaceMarineRepository : SpaceMarineRepository {
 
         cq.select(cb.count(root)).where(*conditions.toTypedArray())
         return em.createQuery(cq).singleResult
+    }
+
+    override fun countByHealthGreaterThan(threshold: Float): Long {
+        val cb = em.criteriaBuilder
+        val cq = cb.createQuery(Long::class.javaObjectType)
+        val root = cq.from(SpaceMarineEntity::class.java)
+        cq.select(cb.count(root)).where(cb.greaterThan(root.get<Float>("health"), threshold))
+        return em.createQuery(cq).singleResult
+    }
+
+    override fun findByNamePrefix(prefix: String): List<SpaceMarine> {
+        val cb = em.criteriaBuilder
+        val cq = cb.createQuery(SpaceMarineEntity::class.java)
+        val root = cq.from(SpaceMarineEntity::class.java)
+        // Спецсимволы LIKE экранируем: префикс — буквальная строка, а не шаблон,
+        // иначе "50%" нашёл бы всё, что начинается с "50".
+        val escaped = prefix.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        cq.select(root)
+            .where(cb.like(root.get<String>("name"), "$escaped%", '\\'))
+            .orderBy(cb.asc(root.get<Int>("id")))
+        return em.createQuery(cq).resultList.map(SpaceMarineEntityMapper::toDomain)
     }
 
     private fun countMatching(cb: CriteriaBuilder, query: SpaceMarineQuery): Long {

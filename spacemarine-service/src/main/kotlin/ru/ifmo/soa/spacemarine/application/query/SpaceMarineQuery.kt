@@ -48,8 +48,3 @@ data class Page<T>(
         get() = if (totalElements == 0L) 0 else ((totalElements + size - 1) / size).toInt()
 }
 
-/** Результат группировки по `id`: сам идентификатор и число элементов в группе. */
-data class IdGroup(
-    val id: Int,
-    val count: Long,
-)

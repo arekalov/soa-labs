@@ -1,5 +1,7 @@
 package ru.ifmo.soa.starship.application.port
 
+import ru.ifmo.soa.starship.application.query.Page
+import ru.ifmo.soa.starship.application.query.StarshipQuery
 import ru.ifmo.soa.starship.domain.model.Starship
 
 /**
@@ -11,10 +13,18 @@ interface StarshipRepository {
 
     fun existsById(id: Long): Boolean
 
+    /** Следующий свободный идентификатор — для создания без указания id клиентом. */
+    fun nextId(): Long
+
     fun create(starship: Starship): Starship
 
-    /** Сохраняет изменившийся состав экипажа. */
+    /** Сохраняет изменившееся состояние: название или состав экипажа. */
     fun save(starship: Starship): Starship
+
+    /** @return `true`, если корабль существовал и был удалён. */
+    fun deleteById(id: Long): Boolean
+
+    fun list(query: StarshipQuery): Page<Starship>
 }
 
 /**

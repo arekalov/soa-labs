@@ -41,6 +41,11 @@ object ParamParsers {
         return value
     }
 
+    /** Любое конечное число: порог для сравнения не обязан быть положительным. */
+    fun finiteFloat(name: String, raw: String): Float =
+        raw.toFloatOrNull()?.takeIf { it.isFinite() }
+            ?: throw InvalidParameterException("Параметр '$name' должен быть числом")
+
     fun int(name: String, raw: String): Int =
         raw.toIntOrNull()
             ?: throw InvalidParameterException("Параметр '$name' должен быть целым числом")

@@ -1,23 +1,165 @@
 openapi: 3.0.3
 info:
   title: Starship Service
-  version: 1.0.0
+  version: 1.1.0
   description: |
-    Сервис располагается на URL `/starship` и реализует ряд дополнительных операций,
-    связанных с вызовом API первого сервиса (SpaceMarine Service).
+    Сервис располагается на URL `/starship`. Реализует операции, связанные с вызовом API
+    первого сервиса (SpaceMarine Service), и базовый набор операций над коллекцией
+    десантных кораблей.
 
 security: []
 
 tags:
   - name: Starship
-    description: Дополнительные операции с десантными кораблями
+    description: Операции над десантными кораблями, заданные вариантом
+  - name: Starship CRUD
+    description: Базовые операции над коллекцией кораблей
 
 paths:
+  /starship:
+    get:
+      tags: [Starship CRUD]
+      operationId: listStarships
+      summary: Получить страницу кораблей
+      parameters:
+        - name: sort
+          in: query
+          description: >
+            Поля сортировки. Повторяющийся параметр, порядок задаёт приоритет;
+            префикс `-` означает убывание.
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [id, -id, name, -name]
+          example: [-name]
+        - name: page
+          in: query
+          description: Номер страницы, нумерация с нуля
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+            default: 0
+        - name: size
+          in: query
+          description: Размер страницы
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            default: 20
+      responses:
+        '200':
+          description: Страница кораблей
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StarshipPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags: [Starship CRUD]
+      operationId: createStarshipWithGeneratedId
+      summary: Создать корабль, идентификатор выдаёт сервер
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StarshipInput'
+      responses:
+        '201':
+          description: Корабль создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Starship'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /starship/{id}:
+    parameters:
+      - name: id
+        in: path
+        description: Идентификатор корабля
+        required: true
+        schema:
+          type: integer
+          format: int64
+          exclusiveMinimum: true
+          minimum: 0
+        example: 1
+    get:
+      tags: [Starship CRUD]
+      operationId: getStarship
+      summary: Получить корабль по идентификатору
+      responses:
+        '200':
+          description: Корабль
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Starship'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    patch:
+      tags: [Starship CRUD]
+      operationId: renameStarship
+      summary: Переименовать корабль
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StarshipInput'
+      responses:
+        '200':
+          description: Корабль обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Starship'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      tags: [Starship CRUD]
+      operationId: deleteStarship
+      summary: Удалить корабль
+      responses:
+        '204':
+          description: Корабль удалён
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /starship/create/{id}/{name}:
     post:
       tags: [Starship]
       operationId: createStarship
-      summary: Создать новый десантный корабль
+      summary: Создать новый десантный корабль с заданным идентификатором
       description: |
         Создаёт новый десантный корабль с заданными идентификатором и названием
         и сохраняет его в базе данных сервиса.
@@ -67,6 +209,48 @@ paths:
                 message: Корабль с id=1 уже существует
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /starship/{starship-id}/board/{space-marine-id}:
+    post:
+      tags: [Starship CRUD]
+      operationId: boardSpaceMarine
+      summary: Посадить десантника на корабль
+      description: |
+        Добавляет десантника в экипаж корабля. Существование десантника проверяется
+        запросом к первому сервису (`GET /space-marines/{id}`).
+      parameters:
+        - $ref: '#/components/parameters/StarshipId'
+        - $ref: '#/components/parameters/SpaceMarineId'
+      responses:
+        '200':
+          description: Десантник добавлен в экипаж
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Starship'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Корабль не найден либо десантник не найден в первом сервисе
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: 404
+                message: Десантник с id=7 не найден
+        '409':
+          description: Десантник уже находится на этом корабле
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: 409
+                message: Десантник с id=7 уже находится на корабле с id=1
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
   /starship/{starship-id}/unload/{space-marine-id}:
     post:
       tags: [Starship]
@@ -74,30 +258,11 @@ paths:
       summary: Высадить выбранного десантника с корабля
       description: |
         Высаживает десантника с указанным идентификатором с выбранного корабля.
-        Для проверки существования десантника и обновления его состояния сервис
-        обращается к API первого сервиса (SpaceMarine Service,
-        `GET /space-marines/{id}`).
+        Для проверки существования десантника сервис обращается к API первого
+        сервиса (SpaceMarine Service, `GET /space-marines/{id}`).
       parameters:
-        - name: starship-id
-          in: path
-          description: Идентификатор корабля, с которого высаживается десантник
-          required: true
-          schema:
-            type: integer
-            format: int64
-            exclusiveMinimum: true
-            minimum: 0
-          example: 1
-        - name: space-marine-id
-          in: path
-          description: Идентификатор высаживаемого десантника (объекта `SpaceMarine` из первого сервиса)
-          required: true
-          schema:
-            type: integer
-            format: int32
-            exclusiveMinimum: true
-            minimum: 0
-          example: 1
+        - $ref: '#/components/parameters/StarshipId'
+        - $ref: '#/components/parameters/SpaceMarineId'
       responses:
         '200':
           description: Десантник успешно высажен с корабля
@@ -128,16 +293,33 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
         '503':
-          description: Первый сервис (SpaceMarine Service) недоступен — операция не выполнена
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              example:
-                code: 503
-                message: Сервис SpaceMarine недоступен, повторите запрос позже
+          $ref: '#/components/responses/ServiceUnavailable'
 
 components:
+  parameters:
+    StarshipId:
+      name: starship-id
+      in: path
+      description: Идентификатор корабля
+      required: true
+      schema:
+        type: integer
+        format: int64
+        exclusiveMinimum: true
+        minimum: 0
+      example: 1
+    SpaceMarineId:
+      name: space-marine-id
+      in: path
+      description: Идентификатор десантника (объекта `SpaceMarine` из первого сервиса)
+      required: true
+      schema:
+        type: integer
+        format: int32
+        exclusiveMinimum: true
+        minimum: 0
+      example: 1
+
   schemas:
     Starship:
       type: object
@@ -145,6 +327,7 @@ components:
       required:
         - id
         - name
+        - marines
       properties:
         id:
           type: integer
@@ -160,11 +343,54 @@ components:
           example: Macragge's Honour
         marines:
           type: array
-          description: Идентификаторы десантников, находящихся на борту
+          description: Идентификаторы десантников, находящихся на борту, по возрастанию
           items:
             type: integer
             format: int32
           example: [1, 2, 3]
+
+    StarshipInput:
+      type: object
+      description: Данные для создания или переименования корабля
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: Название корабля. Непустая строка.
+          minLength: 1
+          example: Macragge's Honour
+
+    StarshipPage:
+      type: object
+      description: Страница коллекции кораблей
+      required:
+        - items
+        - page
+        - size
+        - totalElements
+        - totalPages
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Starship'
+        page:
+          type: integer
+          format: int32
+          example: 0
+        size:
+          type: integer
+          format: int32
+          example: 20
+        totalElements:
+          type: integer
+          format: int64
+          example: 3
+        totalPages:
+          type: integer
+          format: int32
+          example: 1
 
     UnloadResult:
       type: object
@@ -203,8 +429,52 @@ components:
         message:
           type: string
           description: Человекочитаемое описание ошибки
+        details:
+          type: array
+          description: Перечень нарушенных ограничений (для ответа 422)
+          nullable: true
+          items:
+            type: string
 
   responses:
+    BadRequest:
+      description: Некорректный запрос — параметры не соответствуют ожидаемому формату
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: 400
+            message: Параметр 'id' должен быть целым числом больше 0
+    NotFound:
+      description: Корабль с указанным идентификатором не найден
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: 404
+            message: Корабль с id=1 не найден
+    UnprocessableEntity:
+      description: Нарушены ограничения целостности класса Starship
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: 422
+            message: Нарушены ограничения целостности класса Starship
+            details:
+              - "name: строка не может быть пустой"
+    ServiceUnavailable:
+      description: Первый сервис (SpaceMarine Service) недоступен — операция не выполнена
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: 503
+            message: Сервис SpaceMarine недоступен, повторите запрос позже
     InternalServerError:
       description: Внутренняя ошибка сервера
       content:

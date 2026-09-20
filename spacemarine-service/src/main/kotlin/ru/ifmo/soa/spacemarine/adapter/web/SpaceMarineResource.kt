@@ -19,7 +19,6 @@ import jakarta.ws.rs.core.Response
 import jakarta.ws.rs.core.UriInfo
 import ru.ifmo.soa.spacemarine.adapter.web.dto.CountResultDto
 import ru.ifmo.soa.spacemarine.adapter.web.dto.DtoMapper
-import ru.ifmo.soa.spacemarine.adapter.web.dto.IdGroupDto
 import ru.ifmo.soa.spacemarine.adapter.web.dto.SpaceMarineDto
 import ru.ifmo.soa.spacemarine.adapter.web.dto.SpaceMarineInputDto
 import ru.ifmo.soa.spacemarine.adapter.web.dto.SpaceMarinePageDto
@@ -27,11 +26,11 @@ import ru.ifmo.soa.spacemarine.adapter.web.error.InvalidParameterException
 import ru.ifmo.soa.spacemarine.adapter.web.query.ParamParsers
 import ru.ifmo.soa.spacemarine.adapter.web.query.SpaceMarineQueryParser
 import ru.ifmo.soa.spacemarine.application.usecase.CountSpaceMarinesByChapter
+import ru.ifmo.soa.spacemarine.application.usecase.CountSpaceMarinesByHealthGreaterThan
 import ru.ifmo.soa.spacemarine.application.usecase.CreateSpaceMarine
 import ru.ifmo.soa.spacemarine.application.usecase.DeleteSpaceMarine
-import ru.ifmo.soa.spacemarine.application.usecase.FindSpaceMarineWithMinHealth
+import ru.ifmo.soa.spacemarine.application.usecase.FindSpaceMarinesByNamePrefix
 import ru.ifmo.soa.spacemarine.application.usecase.GetSpaceMarine
-import ru.ifmo.soa.spacemarine.application.usecase.GroupSpaceMarinesById
 import ru.ifmo.soa.spacemarine.application.usecase.PatchSpaceMarine
 import ru.ifmo.soa.spacemarine.application.usecase.SearchSpaceMarines
 import ru.ifmo.soa.spacemarine.application.usecase.UpdateSpaceMarine
@@ -42,8 +41,8 @@ import ru.ifmo.soa.spacemarine.application.usecase.UpdateSpaceMarine
  * Разносить их по нескольким классам с одинаковым `@Path` нельзя: это серая зона JAX-RS,
  * и поведение зависит от реализации.
  *
- * Коллизии между `/{id}` и `/health/min` нет: шаблон `{id}` компилируется в `[^/]+?`
- * и совпадает ровно с одним сегментом, а `health/min` — это два сегмента.
+ * Коллизии между `/{id}` и двухсегментными путями вроде `/count/by-chapter` нет:
+ * шаблон `{id}` компилируется в `[^/]+?` и совпадает ровно с одним сегментом.
  */
 @Path("/space-marines")
 @Produces(MediaType.APPLICATION_JSON)
@@ -55,9 +54,9 @@ open class SpaceMarineResource @Inject constructor(
     private val patchSpaceMarine: PatchSpaceMarine,
     private val deleteSpaceMarine: DeleteSpaceMarine,
     private val searchSpaceMarines: SearchSpaceMarines,
-    private val findWithMinHealth: FindSpaceMarineWithMinHealth,
-    private val groupById: GroupSpaceMarinesById,
     private val countByChapter: CountSpaceMarinesByChapter,
+    private val countByHealthGreaterThan: CountSpaceMarinesByHealthGreaterThan,
+    private val findByNamePrefix: FindSpaceMarinesByNamePrefix,
     private val queryParser: SpaceMarineQueryParser,
     private val patchReader: SpaceMarinePatchReader,
 ) {
@@ -107,16 +106,6 @@ open class SpaceMarineResource @Inject constructor(
 
     // ------------------------------------------------------- Доп. операции
 
-    /** Любой десантник с минимальным `health`. На пустой коллекции — 404. */
-    @GET
-    @Path("/health/min")
-    open fun minHealth(): SpaceMarineDto = DtoMapper.toDto(findWithMinHealth.execute())
-
-    /** Группировка по `id`. Массив возвращается на верхнем уровне, без объекта-обёртки. */
-    @GET
-    @Path("/groups/by-id")
-    open fun groupsById(): List<IdGroupDto> = groupById.execute().map(DtoMapper::toDto)
-
     /**
      * Количество десантников заданного ордена.
      *
@@ -134,6 +123,24 @@ open class SpaceMarineResource @Inject constructor(
             throw InvalidParameterException("Параметр 'name' обязателен и не может быть пустым")
         }
         return CountResultDto(countByChapter.execute(name, parentLegion))
+    }
+
+    /** Количество десантников, у которых `health` строго больше заданного. */
+    @GET
+    @Path("/count/by-health-greater-than")
+    open fun countByHealthGreaterThan(@QueryParam("health") health: String?): CountResultDto {
+        if (health.isNullOrBlank()) throw InvalidParameterException("Параметр 'health' обязателен")
+        return CountResultDto(countByHealthGreaterThan.execute(ParamParsers.finiteFloat("health", health)))
+    }
+
+    /** Десантники, чьё имя начинается с заданной подстроки. Массив на верхнем уровне, как в спецификации. */
+    @GET
+    @Path("/search/by-name-prefix")
+    open fun findByNamePrefix(@QueryParam("prefix") prefix: String?): List<SpaceMarineDto> {
+        if (prefix.isNullOrBlank()) {
+            throw InvalidParameterException("Параметр 'prefix' обязателен и не может быть пустым")
+        }
+        return findByNamePrefix.execute(prefix).map(DtoMapper::toDto)
     }
 
     /**

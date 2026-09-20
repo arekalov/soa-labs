@@ -327,51 +327,6 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
-  /space-marines/health/min:
-    get:
-      tags: [SpaceMarine extra]
-      operationId: getSpaceMarineWithMinHealth
-      summary: Получить объект с минимальным значением поля health
-      description: |
-        Возвращает один (любой) объект коллекции, значение поля `health` которого
-        является минимальным среди всех элементов коллекции.
-      responses:
-        '200':
-          description: Объект с минимальным значением поля `health`
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SpaceMarine'
-        '404':
-          description: Коллекция пуста — объект с минимальным `health` отсутствует
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              example:
-                code: 404
-                message: Коллекция пуста
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-  /space-marines/groups/by-id:
-    get:
-      tags: [SpaceMarine extra]
-      operationId: groupSpaceMarinesById
-      summary: Сгруппировать объекты по значению поля id
-      description: |
-        Группирует объекты коллекции по значению поля `id` и возвращает
-        количество элементов в каждой группе.
-      responses:
-        '200':
-          description: Массив групп с количеством элементов в каждой группе
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/IdGroup'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
   /space-marines/count/by-chapter:
     get:
       tags: [SpaceMarine extra]
@@ -404,6 +359,65 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CountResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /space-marines/count/by-health-greater-than:
+    get:
+      tags: [SpaceMarine extra]
+      operationId: countSpaceMarinesByHealthGreaterThan
+      summary: Подсчитать объекты, значение поля health которых больше заданного
+      description: |
+        Возвращает количество объектов коллекции, значение поля `health` которых
+        строго больше заданного.
+      parameters:
+        - name: health
+          in: query
+          description: Пороговое значение поля `health`
+          required: true
+          schema:
+            type: number
+            format: float
+          example: 50
+      responses:
+        '200':
+          description: Количество объектов, значение поля `health` которых больше заданного
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CountResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /space-marines/search/by-name-prefix:
+    get:
+      tags: [SpaceMarine extra]
+      operationId: findSpaceMarinesByNamePrefix
+      summary: Найти объекты, значение поля name которых начинается с заданной подстроки
+      description: |
+        Возвращает массив объектов коллекции, значение поля `name` которых
+        начинается с заданной подстроки. Сравнение чувствительно к регистру,
+        объекты упорядочены по возрастанию `id`.
+      parameters:
+        - name: prefix
+          in: query
+          description: Подстрока, с которой должно начинаться значение поля `name`
+          required: true
+          schema:
+            type: string
+            minLength: 1
+          example: Brother
+      responses:
+        '200':
+          description: Массив найденных объектов (возможно, пустой)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SpaceMarine'
         '400':
           $ref: '#/components/responses/BadRequest'
         '500':
@@ -630,24 +644,6 @@ components:
           format: int32
           description: Общее количество страниц
           example: 3
-
-    IdGroup:
-      type: object
-      description: Группа элементов коллекции по значению поля `id`
-      required:
-        - id
-        - count
-      properties:
-        id:
-          type: integer
-          format: int32
-          description: Значение поля `id`, по которому выполнена группировка
-          example: 1
-        count:
-          type: integer
-          format: int64
-          description: Количество элементов в группе
-          example: 1
 
     CountResult:
       type: object

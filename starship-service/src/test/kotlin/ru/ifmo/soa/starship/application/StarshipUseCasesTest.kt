@@ -5,14 +5,20 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import ru.ifmo.soa.starship.application.error.InvalidParameterException
+import ru.ifmo.soa.starship.application.error.SpaceMarineAlreadyOnBoardException
 import ru.ifmo.soa.starship.application.error.SpaceMarineNotFoundException
 import ru.ifmo.soa.starship.application.error.SpaceMarineNotOnBoardException
 import ru.ifmo.soa.starship.application.error.SpaceMarineServiceUnavailableException
 import ru.ifmo.soa.starship.application.error.StarshipAlreadyExistsException
 import ru.ifmo.soa.starship.application.error.StarshipNotFoundException
+import ru.ifmo.soa.starship.application.error.StarshipValidationException
 import ru.ifmo.soa.starship.application.port.SpaceMarineGateway
 import ru.ifmo.soa.starship.application.port.StarshipRepository
+import ru.ifmo.soa.starship.application.query.Page
+import ru.ifmo.soa.starship.application.query.StarshipQuery
+import ru.ifmo.soa.starship.application.usecase.BoardSpaceMarine
 import ru.ifmo.soa.starship.application.usecase.CreateStarship
+import ru.ifmo.soa.starship.application.usecase.CreateStarshipWithGeneratedId
 import ru.ifmo.soa.starship.application.usecase.UnloadSpaceMarine
 import ru.ifmo.soa.starship.domain.model.Starship
 
@@ -38,6 +44,11 @@ class StarshipUseCasesTest {
             saved = starship
             return starship
         }
+
+        override fun nextId(): Long = (storage.keys.maxOrNull() ?: 0L) + 1
+        override fun deleteById(id: Long): Boolean = storage.remove(id) != null
+        override fun list(query: StarshipQuery): Page<Starship> =
+            Page(storage.values.sortedBy { it.id }, query.page, query.size, storage.size.toLong())
     }
 
     private class FakeGateway(
@@ -92,6 +103,43 @@ class StarshipUseCasesTest {
             .isInstanceOf(InvalidParameterException::class.java)
         assertThatThrownBy { create.execute(1L, null) }
             .isInstanceOf(InvalidParameterException::class.java)
+    }
+
+    @Test
+    @DisplayName("создание без идентификатора берёт следующий свободный номер")
+    fun `generated id follows the last one`() {
+        val repository = FakeRepository(Starship(4L, "Old"))
+
+        val ship = CreateStarshipWithGeneratedId(repository).execute("New")
+
+        assertThat(ship.id).isEqualTo(5L)
+        assertThatThrownBy { CreateStarshipWithGeneratedId(repository).execute("  ") }
+            .isInstanceOf(StarshipValidationException::class.java)
+    }
+
+    // ------------------------------------------------------------- посадка
+
+    @Test
+    @DisplayName("посадка проверяет десантника в первом сервисе и добавляет его в экипаж")
+    fun `boarding adds an existing marine`() {
+        val repository = FakeRepository(Starship(1L, "Ship"))
+        val gateway = FakeGateway(known = setOf(7))
+
+        val ship = BoardSpaceMarine(repository, gateway).execute(1L, 7)
+
+        assertThat(ship.marines).containsExactly(7)
+        assertThat(gateway.calls).isEqualTo(1)
+    }
+
+    @Test
+    @DisplayName("повторная посадка — конфликт, неизвестный десантник — 404")
+    fun `boarding rejects duplicates and unknown marines`() {
+        val repository = FakeRepository(Starship(1L, "Ship", setOf(7)))
+
+        assertThatThrownBy { BoardSpaceMarine(repository, FakeGateway(known = setOf(7))).execute(1L, 7) }
+            .isInstanceOf(SpaceMarineAlreadyOnBoardException::class.java)
+        assertThatThrownBy { BoardSpaceMarine(repository, FakeGateway()).execute(1L, 8) }
+            .isInstanceOf(SpaceMarineNotFoundException::class.java)
     }
 
     // ------------------------------------------------------------- высадка

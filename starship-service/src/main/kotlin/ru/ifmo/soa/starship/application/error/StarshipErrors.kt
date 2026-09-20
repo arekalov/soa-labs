@@ -16,6 +16,14 @@ class SpaceMarineNotFoundException(val id: Int) :
 class SpaceMarineNotOnBoardException(val starshipId: Long, val spaceMarineId: Int) :
     RuntimeException("Десантник с id=$spaceMarineId не находится на корабле с id=$starshipId")
 
+/** Десантник уже находится на этом корабле. HTTP 409. */
+class SpaceMarineAlreadyOnBoardException(val starshipId: Long, val spaceMarineId: Int) :
+    RuntimeException("Десантник с id=$spaceMarineId уже находится на корабле с id=$starshipId")
+
+/** Нарушены ограничения полей корабля. HTTP 422 с перечнем нарушений. */
+class StarshipValidationException(val details: List<String>) :
+    RuntimeException("Нарушены ограничения целостности класса Starship")
+
 /**
  * Первый сервис недоступен или нарушил контракт. HTTP 503.
  *

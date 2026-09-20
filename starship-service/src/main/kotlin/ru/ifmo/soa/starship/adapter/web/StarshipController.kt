@@ -4,10 +4,26 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.DeleteMapping
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import ru.ifmo.soa.starship.application.error.InvalidParameterException
+import ru.ifmo.soa.starship.application.query.Page
+import ru.ifmo.soa.starship.application.query.StarshipField
+import ru.ifmo.soa.starship.application.query.StarshipQuery
+import ru.ifmo.soa.starship.application.query.StarshipSort
+import ru.ifmo.soa.starship.application.usecase.BoardSpaceMarine
 import ru.ifmo.soa.starship.application.usecase.CreateStarship
+import ru.ifmo.soa.starship.application.usecase.CreateStarshipWithGeneratedId
+import ru.ifmo.soa.starship.application.usecase.DeleteStarship
+import ru.ifmo.soa.starship.application.usecase.GetStarship
+import ru.ifmo.soa.starship.application.usecase.ListStarships
+import ru.ifmo.soa.starship.application.usecase.RenameStarship
 import ru.ifmo.soa.starship.application.usecase.UnloadSpaceMarine
 import ru.ifmo.soa.starship.domain.model.Starship
 
@@ -16,6 +32,20 @@ data class StarshipDto(
     val id: Long,
     val name: String,
     val marines: List<Int>,
+)
+
+/** Схема `StarshipInput`: тело создания и переименования. Поле nullable намеренно — проверку делает сценарий. */
+data class StarshipInputDto(
+    val name: String? = null,
+)
+
+/** Схема `StarshipPage`. */
+data class StarshipPageDto(
+    val items: List<StarshipDto>,
+    val page: Int,
+    val size: Int,
+    val totalElements: Long,
+    val totalPages: Int,
 )
 
 /** Схема `UnloadResult`. */
@@ -34,18 +64,25 @@ data class ErrorDto(
 )
 
 /**
- * Две операции второго сервиса.
+ * Операции второго сервиса: две из спецификации ЛР1 и базовый набор над коллекцией кораблей.
  *
- * Префикс `/starship` из спецификации даёт контекст развёртывания (WAR называется
- * `starship.war`), поэтому в аннотациях он не повторяется. Для запуска со встроенным
- * сервером тот же префикс задан свойством `server.servlet.context-path`, чтобы адреса
- * локально и на сервере совпадали.
+ * Префикс `/starship` даёт контекст развёртывания (WAR называется `starship.war`),
+ * поэтому в аннотациях он не повторяется. Литеральные сегменты вроде `create`
+ * Spring сопоставляет раньше шаблонов `{id}`, так что пересечений нет.
  */
 @RestController
 class StarshipController(
     private val createStarship: CreateStarship,
+    private val createWithGeneratedId: CreateStarshipWithGeneratedId,
+    private val listStarships: ListStarships,
+    private val getStarship: GetStarship,
+    private val renameStarship: RenameStarship,
+    private val deleteStarship: DeleteStarship,
+    private val boardSpaceMarine: BoardSpaceMarine,
     private val unloadSpaceMarine: UnloadSpaceMarine,
 ) {
+
+    // ------------------------------------------------------ спецификация ЛР1
 
     /**
      * Вариантов пути три, потому что пустое название даёт `/create/1/` или `/create/1`.
@@ -59,18 +96,10 @@ class StarshipController(
         @PathVariable id: Long,
         @PathVariable(required = false) name: String?,
     ): ResponseEntity<StarshipDto> =
-        ResponseEntity
-            .status(HttpStatus.CREATED)
-            .body(createStarship.execute(id, name).toDto())
+        ResponseEntity.status(HttpStatus.CREATED).body(createStarship.execute(id, name).toDto())
 
-    /**
-     * Имена переменных пути записаны через дефис — ровно как в спецификации,
-     * поэтому связывание задано явно.
-     */
-    @PostMapping(
-        value = ["/{starship-id}/unload/{space-marine-id}"],
-        produces = [MediaType.APPLICATION_JSON_VALUE],
-    )
+    /** Имена переменных пути записаны через дефис — ровно как в спецификации. */
+    @PostMapping(value = ["/{starship-id}/unload/{space-marine-id}"], produces = [MediaType.APPLICATION_JSON_VALUE])
     fun unload(
         @PathVariable("starship-id") starshipId: Long,
         @PathVariable("space-marine-id") spaceMarineId: Int,
@@ -79,9 +108,73 @@ class StarshipController(
         return UnloadResultDto(result.starshipId, result.spaceMarineId, result.message)
     }
 
-    private fun Starship.toDto() = StarshipDto(
-        id = id,
-        name = name,
-        marines = marines.sorted(),
+    // ------------------------------------------------------- базовые операции
+
+    @GetMapping(value = ["", "/"], produces = [MediaType.APPLICATION_JSON_VALUE])
+    fun list(
+        @RequestParam(required = false) sort: List<String>?,
+        @RequestParam(required = false) page: String?,
+        @RequestParam(required = false) size: String?,
+    ): StarshipPageDto = listStarships.execute(parseQuery(sort, page, size)).toDto()
+
+    @PostMapping(value = ["", "/"], produces = [MediaType.APPLICATION_JSON_VALUE])
+    fun createGenerated(@RequestBody(required = false) body: StarshipInputDto?): ResponseEntity<StarshipDto> =
+        ResponseEntity.status(HttpStatus.CREATED).body(createWithGeneratedId.execute(body?.name).toDto())
+
+    @GetMapping(value = ["/{id}"], produces = [MediaType.APPLICATION_JSON_VALUE])
+    fun get(@PathVariable id: Long): StarshipDto = getStarship.execute(id).toDto()
+
+    @PatchMapping(value = ["/{id}"], produces = [MediaType.APPLICATION_JSON_VALUE])
+    fun rename(@PathVariable id: Long, @RequestBody(required = false) body: StarshipInputDto?): StarshipDto =
+        renameStarship.execute(id, body?.name).toDto()
+
+    @DeleteMapping(value = ["/{id}"])
+    fun delete(@PathVariable id: Long): ResponseEntity<Void> {
+        deleteStarship.execute(id)
+        return ResponseEntity.noContent().build()
+    }
+
+    @PostMapping(value = ["/{starship-id}/board/{space-marine-id}"], produces = [MediaType.APPLICATION_JSON_VALUE])
+    fun board(
+        @PathVariable("starship-id") starshipId: Long,
+        @PathVariable("space-marine-id") spaceMarineId: Int,
+    ): StarshipDto = boardSpaceMarine.execute(starshipId, spaceMarineId).toDto()
+
+    // ------------------------------------------------------------- разбор
+
+    private fun parseQuery(sort: List<String>?, page: String?, size: String?): StarshipQuery {
+        val sorts = (sort ?: emptyList()).map { token ->
+            val descending = token.startsWith('-')
+            val field = StarshipField.byApiNameOrNull(if (descending) token.substring(1) else token)
+                ?: throw InvalidParameterException("Параметр 'sort' содержит недопустимое значение '$token'")
+            StarshipSort(field, descending)
+        }
+        if (sorts.map { it.field }.toSet().size != sorts.size) {
+            throw InvalidParameterException("Поле указано в параметре 'sort' более одного раза")
+        }
+        return StarshipQuery(
+            sort = sorts,
+            page = intWithMin("page", page, 0, StarshipQuery.DEFAULT_PAGE),
+            size = intWithMin("size", size, 1, StarshipQuery.DEFAULT_SIZE),
+        )
+    }
+
+    private fun intWithMin(name: String, raw: String?, min: Int, default: Int): Int {
+        if (raw == null) return default
+        val value = raw.toIntOrNull()
+        if (value == null || value < min) {
+            throw InvalidParameterException("Параметр '$name' должен быть целым числом не меньше $min")
+        }
+        return value
+    }
+
+    private fun Starship.toDto() = StarshipDto(id = id, name = name, marines = marines.sorted())
+
+    private fun Page<Starship>.toDto() = StarshipPageDto(
+        items = items.map { it.toDto() },
+        page = page,
+        size = size,
+        totalElements = totalElements,
+        totalPages = totalPages,
     )
 }

@@ -1,6 +1,5 @@
 package ru.ifmo.soa.spacemarine.adapter.web.dto
 
-import ru.ifmo.soa.spacemarine.application.query.IdGroup
 import ru.ifmo.soa.spacemarine.application.query.Page
 import ru.ifmo.soa.spacemarine.domain.model.ChapterDraft
 import ru.ifmo.soa.spacemarine.domain.model.CoordinatesDraft
@@ -30,8 +29,6 @@ object DtoMapper {
         totalElements = page.totalElements,
         totalPages = page.totalPages,
     )
-
-    fun toDto(group: IdGroup): IdGroupDto = IdGroupDto(group.id, group.count)
 
     /** Входной DTO превращается в черновик; проверять его будет домен. */
     fun toDraft(input: SpaceMarineInputDto): SpaceMarineDraft = SpaceMarineDraft(

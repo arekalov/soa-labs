@@ -4,10 +4,8 @@ import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import jakarta.transaction.Transactional
 import ru.ifmo.soa.spacemarine.application.SpaceMarinePatch
-import ru.ifmo.soa.spacemarine.application.error.EmptyCollectionException
 import ru.ifmo.soa.spacemarine.application.error.SpaceMarineNotFoundException
 import ru.ifmo.soa.spacemarine.application.port.SpaceMarineRepository
-import ru.ifmo.soa.spacemarine.application.query.IdGroup
 import ru.ifmo.soa.spacemarine.application.query.Page
 import ru.ifmo.soa.spacemarine.application.query.SpaceMarineQuery
 import ru.ifmo.soa.spacemarine.domain.model.SpaceMarine
@@ -87,27 +85,26 @@ open class SearchSpaceMarines @Inject constructor(
 }
 
 @ApplicationScoped
-open class FindSpaceMarineWithMinHealth @Inject constructor(
-    private val repository: SpaceMarineRepository,
-) {
-    @Transactional(Transactional.TxType.SUPPORTS)
-    open fun execute(): SpaceMarine =
-        repository.findWithMinHealth() ?: throw EmptyCollectionException()
-}
-
-@ApplicationScoped
-open class GroupSpaceMarinesById @Inject constructor(
-    private val repository: SpaceMarineRepository,
-) {
-    @Transactional(Transactional.TxType.SUPPORTS)
-    open fun execute(): List<IdGroup> = repository.groupById()
-}
-
-@ApplicationScoped
 open class CountSpaceMarinesByChapter @Inject constructor(
     private val repository: SpaceMarineRepository,
 ) {
     @Transactional(Transactional.TxType.SUPPORTS)
     open fun execute(name: String, parentLegion: String?): Long =
         repository.countByChapter(name, parentLegion)
+}
+
+@ApplicationScoped
+open class CountSpaceMarinesByHealthGreaterThan @Inject constructor(
+    private val repository: SpaceMarineRepository,
+) {
+    @Transactional(Transactional.TxType.SUPPORTS)
+    open fun execute(threshold: Float): Long = repository.countByHealthGreaterThan(threshold)
+}
+
+@ApplicationScoped
+open class FindSpaceMarinesByNamePrefix @Inject constructor(
+    private val repository: SpaceMarineRepository,
+) {
+    @Transactional(Transactional.TxType.SUPPORTS)
+    open fun execute(prefix: String): List<SpaceMarine> = repository.findByNamePrefix(prefix)
 }

@@ -2,6 +2,7 @@ package ru.ifmo.soa.starship.adapter.web
 
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.HttpMediaTypeNotAcceptableException
@@ -11,11 +12,13 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.servlet.NoHandlerFoundException
 import org.springframework.web.servlet.resource.NoResourceFoundException
 import ru.ifmo.soa.starship.application.error.InvalidParameterException
+import ru.ifmo.soa.starship.application.error.SpaceMarineAlreadyOnBoardException
 import ru.ifmo.soa.starship.application.error.SpaceMarineNotFoundException
 import ru.ifmo.soa.starship.application.error.SpaceMarineNotOnBoardException
 import ru.ifmo.soa.starship.application.error.SpaceMarineServiceUnavailableException
 import ru.ifmo.soa.starship.application.error.StarshipAlreadyExistsException
 import ru.ifmo.soa.starship.application.error.StarshipNotFoundException
+import ru.ifmo.soa.starship.application.error.StarshipValidationException
 import java.util.logging.Level
 import java.util.logging.Logger
 
@@ -68,9 +71,19 @@ class ApiExceptionHandler {
     fun onMediaType(e: Exception) =
         error(HttpStatus.BAD_REQUEST, "Запрос не соответствует ожидаемому формату")
 
-    @ExceptionHandler(StarshipAlreadyExistsException::class)
-    fun onConflict(e: StarshipAlreadyExistsException) =
+    @ExceptionHandler(StarshipAlreadyExistsException::class, SpaceMarineAlreadyOnBoardException::class)
+    fun onConflict(e: RuntimeException) =
         error(HttpStatus.CONFLICT, e.message ?: "Конфликт состояния")
+
+    /** Тело разобрано, но нарушает ограничения полей — 422 с перечнем, как в первом сервисе. */
+    @ExceptionHandler(StarshipValidationException::class)
+    fun onValidation(e: StarshipValidationException) =
+        error(HttpStatus.UNPROCESSABLE_ENTITY, e.message ?: "Нарушены ограничения целостности", e.details)
+
+    /** Тело не является корректным JSON. */
+    @ExceptionHandler(HttpMessageNotReadableException::class)
+    fun onUnreadableBody(e: HttpMessageNotReadableException) =
+        error(HttpStatus.BAD_REQUEST, "Тело запроса не является корректным JSON")
 
     /**
      * Первый сервис недоступен. Именно 503: спецификация описывает этот случай явно,

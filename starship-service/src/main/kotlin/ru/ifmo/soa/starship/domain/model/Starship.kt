@@ -3,9 +3,8 @@ package ru.ifmo.soa.starship.domain.model
 /**
  * Десантный корабль.
  *
- * Идентификатор приходит из URL и задаётся клиентом — в отличие от десантника,
- * которому идентификатор присваивает хранилище. Так требует спецификация:
- * `POST /starship/create/{id}/{name}`.
+ * Идентификатор либо задаётся клиентом (эндпоинт `/create/{id}/{name}` из спецификации ЛР1),
+ * либо выдаётся хранилищем — в обоих случаях он известен до создания объекта.
  *
  * [marines] хранит идентификаторы десантников из первого сервиса. Полноценных объектов
  * здесь нет и быть не должно: это граница сервисов, связь поддерживается только по REST.
@@ -23,6 +22,11 @@ data class Starship(
 
     fun hasOnBoard(spaceMarineId: Int): Boolean = spaceMarineId in marines
 
+    /** Сажает десантника на борт. Существование десантника проверяет вызывающий сценарий. */
+    fun board(spaceMarineId: Int): Starship = copy(marines = marines + spaceMarineId)
+
     /** Снимает десантника с борта. Проверку присутствия выполняет вызывающий сценарий. */
     fun unload(spaceMarineId: Int): Starship = copy(marines = marines - spaceMarineId)
+
+    fun rename(newName: String): Starship = copy(name = newName)
 }

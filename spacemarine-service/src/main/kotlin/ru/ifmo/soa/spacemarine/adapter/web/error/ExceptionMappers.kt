@@ -7,7 +7,6 @@ import jakarta.ws.rs.core.Response
 import jakarta.ws.rs.ext.ExceptionMapper
 import jakarta.ws.rs.ext.Provider
 import ru.ifmo.soa.spacemarine.adapter.web.dto.ErrorDto
-import ru.ifmo.soa.spacemarine.application.error.EmptyCollectionException
 import ru.ifmo.soa.spacemarine.application.error.SpaceMarineNotFoundException
 import ru.ifmo.soa.spacemarine.domain.validation.DomainValidationException
 import java.util.logging.Level
@@ -80,12 +79,6 @@ class DomainValidationExceptionMapper : ExceptionMapper<DomainValidationExceptio
 class SpaceMarineNotFoundExceptionMapper : ExceptionMapper<SpaceMarineNotFoundException> {
     override fun toResponse(exception: SpaceMarineNotFoundException): Response =
         errorResponse(HttpCodes.NOT_FOUND, exception.message ?: "Элемент не найден")
-}
-
-@Provider
-class EmptyCollectionExceptionMapper : ExceptionMapper<EmptyCollectionException> {
-    override fun toResponse(exception: EmptyCollectionException): Response =
-        errorResponse(HttpCodes.NOT_FOUND, exception.message ?: "Коллекция пуста")
 }
 
 /**

@@ -1,6 +1,5 @@
 package ru.ifmo.soa.spacemarine.application.port
 
-import ru.ifmo.soa.spacemarine.application.query.IdGroup
 import ru.ifmo.soa.spacemarine.application.query.Page
 import ru.ifmo.soa.spacemarine.application.query.SpaceMarineQuery
 import ru.ifmo.soa.spacemarine.domain.model.SpaceMarine
@@ -26,12 +25,6 @@ interface SpaceMarineRepository {
     /** Выборка с фильтрами, сортировкой и пагинацией. */
     fun search(query: SpaceMarineQuery): Page<SpaceMarine>
 
-    /** Любой десантник с минимальным `health`; `null`, если коллекция пуста. */
-    fun findWithMinHealth(): SpaceMarine?
-
-    /** Группировка по `id` с числом элементов в каждой группе. */
-    fun groupById(): List<IdGroup>
-
     /**
      * Количество десантников заданного ордена.
      *
@@ -39,4 +32,10 @@ interface SpaceMarineRepository {
      * необязательным и не описывает семантику его отсутствия.
      */
     fun countByChapter(name: String, parentLegion: String?): Long
+
+    /** Количество десантников, у которых `health` строго больше порога. */
+    fun countByHealthGreaterThan(threshold: Float): Long
+
+    /** Десантники, чьё имя начинается с подстроки; упорядочены по `id`. */
+    fun findByNamePrefix(prefix: String): List<SpaceMarine>
 }
