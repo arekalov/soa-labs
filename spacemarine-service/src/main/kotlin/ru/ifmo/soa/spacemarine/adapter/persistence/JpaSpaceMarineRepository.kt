@@ -10,6 +10,7 @@ import jakarta.persistence.criteria.Predicate
 import jakarta.persistence.criteria.Root
 import ru.ifmo.soa.spacemarine.application.port.SpaceMarineRepository
 import ru.ifmo.soa.spacemarine.application.query.Page
+import ru.ifmo.soa.spacemarine.application.query.Paging
 import ru.ifmo.soa.spacemarine.application.query.SpaceMarineField
 import ru.ifmo.soa.spacemarine.application.query.SpaceMarineQuery
 import ru.ifmo.soa.spacemarine.application.query.SortSpec
@@ -106,17 +107,31 @@ open class JpaSpaceMarineRepository : SpaceMarineRepository {
         return em.createQuery(cq).singleResult
     }
 
-    override fun findByNamePrefix(prefix: String): List<SpaceMarine> {
+    override fun findByNamePrefix(prefix: String, paging: Paging): Page<SpaceMarine> {
         val cb = em.criteriaBuilder
-        val cq = cb.createQuery(SpaceMarineEntity::class.java)
-        val root = cq.from(SpaceMarineEntity::class.java)
         // Спецсимволы LIKE экранируем: префикс — буквальная строка, а не шаблон,
         // иначе "50%" нашёл бы всё, что начинается с "50".
-        val escaped = prefix.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        val pattern = prefix.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+
+        val countQuery = cb.createQuery(Long::class.javaObjectType)
+        val countRoot = countQuery.from(SpaceMarineEntity::class.java)
+        countQuery.select(cb.count(countRoot)).where(cb.like(countRoot.get<String>("name"), pattern, '\\'))
+        val total = em.createQuery(countQuery).singleResult
+        if (total == 0L || paging.offset >= total || paging.offset > Int.MAX_VALUE) {
+            return Page(emptyList(), paging.page, paging.size, total)
+        }
+
+        val cq = cb.createQuery(SpaceMarineEntity::class.java)
+        val root = cq.from(SpaceMarineEntity::class.java)
         cq.select(root)
-            .where(cb.like(root.get<String>("name"), "$escaped%", '\\'))
+            .where(cb.like(root.get<String>("name"), pattern, '\\'))
             .orderBy(cb.asc(root.get<Int>("id")))
-        return em.createQuery(cq).resultList.map(SpaceMarineEntityMapper::toDomain)
+        val items = em.createQuery(cq)
+            .setFirstResult(paging.offset.toInt())
+            .setMaxResults(paging.size)
+            .resultList
+            .map(SpaceMarineEntityMapper::toDomain)
+        return Page(items, paging.page, paging.size, total)
     }
 
     private fun countMatching(cb: CriteriaBuilder, query: SpaceMarineQuery): Long {

@@ -71,14 +71,18 @@ export class SoaClient {
     return this.call(`${this.marines}/space-marines/count/by-health-greater-than?${new URLSearchParams({ health })}`);
   }
 
-  findByNamePrefix(prefix: string): Promise<ApiResult<SpaceMarineDto[]>> {
-    return this.call(`${this.marines}/space-marines/search/by-name-prefix?${new URLSearchParams({ prefix })}`);
+  findByNamePrefix(prefix: string, page: number, size: number): Promise<ApiResult<SpaceMarinePageDto>> {
+    const query = new URLSearchParams({ prefix, page: String(page), size: String(size) });
+    return this.call(`${this.marines}/space-marines/search/by-name-prefix?${query}`);
   }
 
   // -------------------------------------------------------------- Starship
 
-  listStarships(sort: string[], page: number, size: number): Promise<ApiResult<StarshipPageDto>> {
+  listStarships(filters: Record<string, string>, sort: string[], page: number, size: number): Promise<ApiResult<StarshipPageDto>> {
     const query = new URLSearchParams();
+    for (const [key, value] of Object.entries(filters)) {
+      if (value.trim() !== '') query.append(key, value);
+    }
     for (const token of sort) query.append('sort', token);
     query.append('page', String(page));
     query.append('size', String(size));

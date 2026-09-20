@@ -1,6 +1,7 @@
 package ru.ifmo.soa.spacemarine.application.port
 
 import ru.ifmo.soa.spacemarine.application.query.Page
+import ru.ifmo.soa.spacemarine.application.query.Paging
 import ru.ifmo.soa.spacemarine.application.query.SpaceMarineQuery
 import ru.ifmo.soa.spacemarine.domain.model.SpaceMarine
 
@@ -36,6 +37,6 @@ interface SpaceMarineRepository {
     /** Количество десантников, у которых `health` строго больше порога. */
     fun countByHealthGreaterThan(threshold: Float): Long
 
-    /** Десантники, чьё имя начинается с подстроки; упорядочены по `id`. */
-    fun findByNamePrefix(prefix: String): List<SpaceMarine>
+    /** Страница десантников, чьё имя начинается с подстроки; упорядочены по `id`. */
+    fun findByNamePrefix(prefix: String, paging: Paging): Page<SpaceMarine>
 }

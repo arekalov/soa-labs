@@ -13,13 +13,16 @@ import jakarta.persistence.Table
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
+import org.springframework.data.jpa.domain.Specification
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor
 import org.springframework.stereotype.Repository
 import org.springframework.transaction.annotation.Transactional
 import ru.ifmo.soa.starship.application.error.StarshipAlreadyExistsException
 import ru.ifmo.soa.starship.application.port.StarshipRepository
 import ru.ifmo.soa.starship.application.query.Page
 import ru.ifmo.soa.starship.application.query.StarshipField
+import ru.ifmo.soa.starship.application.query.StarshipFilter
 import ru.ifmo.soa.starship.application.query.StarshipQuery
 import ru.ifmo.soa.starship.domain.model.Starship
 
@@ -54,7 +57,7 @@ class StarshipEntity(
     var marines: MutableSet<Int> = mutableSetOf(),
 )
 
-interface SpringDataStarshipRepository : JpaRepository<StarshipEntity, Long>
+interface SpringDataStarshipRepository : JpaRepository<StarshipEntity, Long>, JpaSpecificationExecutor<StarshipEntity>
 
 /**
  * Реализация порта поверх Spring Data.
@@ -120,7 +123,7 @@ class JpaStarshipRepository(
         // Стабилизатор пагинации: без него порядок строк с равными ключами не гарантирован
         if (query.sort.none { it.field == StarshipField.ID }) orders += Sort.Order.asc("id")
 
-        val result = jpa.findAll(PageRequest.of(query.page, query.size, Sort.by(orders)))
+        val result = jpa.findAll(specification(query.filter), PageRequest.of(query.page, query.size, Sort.by(orders)))
         return Page(
             items = result.content.map { it.toDomain() },
             page = query.page,
@@ -128,6 +131,16 @@ class JpaStarshipRepository(
             totalElements = result.totalElements,
         )
     }
+
+    /** Фильтры на точное равенство; без условий — выборка всей таблицы. */
+    private fun specification(filter: StarshipFilter): Specification<StarshipEntity> =
+        Specification { root, _, cb ->
+            val predicates = listOfNotNull(
+                filter.id?.let { cb.equal(root.get<Long>("id"), it) },
+                filter.name?.let { cb.equal(root.get<String>("name"), it) },
+            )
+            if (predicates.isEmpty()) null else cb.and(*predicates.toTypedArray())
+        }
 
     private fun StarshipEntity.toDomain(): Starship = Starship(
         id = requireNotNull(id) { "У сохранённого корабля обязан быть идентификатор" },

@@ -15,10 +15,12 @@ import ru.ifmo.soa.starship.application.error.StarshipValidationException
 import ru.ifmo.soa.starship.application.port.SpaceMarineGateway
 import ru.ifmo.soa.starship.application.port.StarshipRepository
 import ru.ifmo.soa.starship.application.query.Page
+import ru.ifmo.soa.starship.application.query.StarshipFilter
 import ru.ifmo.soa.starship.application.query.StarshipQuery
 import ru.ifmo.soa.starship.application.usecase.BoardSpaceMarine
 import ru.ifmo.soa.starship.application.usecase.CreateStarship
 import ru.ifmo.soa.starship.application.usecase.CreateStarshipWithGeneratedId
+import ru.ifmo.soa.starship.application.usecase.ListStarships
 import ru.ifmo.soa.starship.application.usecase.UnloadSpaceMarine
 import ru.ifmo.soa.starship.domain.model.Starship
 
@@ -47,8 +49,10 @@ class StarshipUseCasesTest {
 
         override fun nextId(): Long = (storage.keys.maxOrNull() ?: 0L) + 1
         override fun deleteById(id: Long): Boolean = storage.remove(id) != null
-        override fun list(query: StarshipQuery): Page<Starship> =
-            Page(storage.values.sortedBy { it.id }, query.page, query.size, storage.size.toLong())
+        override fun list(query: StarshipQuery): Page<Starship> {
+            val matching = storage.values.filter { query.filter.matches(it.id, it.name) }.sortedBy { it.id }
+            return Page(matching, query.page, query.size, matching.size.toLong())
+        }
     }
 
     private class FakeGateway(
@@ -115,6 +119,18 @@ class StarshipUseCasesTest {
         assertThat(ship.id).isEqualTo(5L)
         assertThatThrownBy { CreateStarshipWithGeneratedId(repository).execute("  ") }
             .isInstanceOf(StarshipValidationException::class.java)
+    }
+
+    @Test
+    @DisplayName("список фильтруется по точному совпадению id и названия")
+    fun `list applies exact filters`() {
+        val repository = FakeRepository(Starship(1L, "Alpha"), Starship(2L, "Beta"), Starship(3L, "Alpha"))
+        val list = ListStarships(repository)
+
+        assertThat(list.execute(StarshipQuery(filter = StarshipFilter(name = "Alpha"))).items.map { it.id })
+            .containsExactly(1L, 3L)
+        assertThat(list.execute(StarshipQuery(filter = StarshipFilter(id = 2L, name = "Alpha"))).items).isEmpty()
+        assertThat(list.execute(StarshipQuery()).totalElements).isEqualTo(3L)
     }
 
     // ------------------------------------------------------------- посадка

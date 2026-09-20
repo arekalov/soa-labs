@@ -25,6 +25,8 @@ import ru.ifmo.soa.spacemarine.adapter.web.dto.SpaceMarinePageDto
 import ru.ifmo.soa.spacemarine.adapter.web.error.InvalidParameterException
 import ru.ifmo.soa.spacemarine.adapter.web.query.ParamParsers
 import ru.ifmo.soa.spacemarine.adapter.web.query.SpaceMarineQueryParser
+import ru.ifmo.soa.spacemarine.application.query.Paging
+import ru.ifmo.soa.spacemarine.application.query.SpaceMarineQuery
 import ru.ifmo.soa.spacemarine.application.usecase.CountSpaceMarinesByChapter
 import ru.ifmo.soa.spacemarine.application.usecase.CountSpaceMarinesByHealthGreaterThan
 import ru.ifmo.soa.spacemarine.application.usecase.CreateSpaceMarine
@@ -133,14 +135,22 @@ open class SpaceMarineResource @Inject constructor(
         return CountResultDto(countByHealthGreaterThan.execute(ParamParsers.finiteFloat("health", health)))
     }
 
-    /** Десантники, чьё имя начинается с заданной подстроки. Массив на верхнем уровне, как в спецификации. */
+    /** Страница десантников, чьё имя начинается с заданной подстроки. */
     @GET
     @Path("/search/by-name-prefix")
-    open fun findByNamePrefix(@QueryParam("prefix") prefix: String?): List<SpaceMarineDto> {
+    open fun findByNamePrefix(
+        @QueryParam("prefix") prefix: String?,
+        @QueryParam("page") page: String?,
+        @QueryParam("size") size: String?,
+    ): SpaceMarinePageDto {
         if (prefix.isNullOrBlank()) {
             throw InvalidParameterException("Параметр 'prefix' обязателен и не может быть пустым")
         }
-        return findByNamePrefix.execute(prefix).map(DtoMapper::toDto)
+        val paging = Paging(
+            page = ParamParsers.intWithMin("page", page, min = 0, default = SpaceMarineQuery.DEFAULT_PAGE),
+            size = ParamParsers.intWithMin("size", size, min = 1, default = SpaceMarineQuery.DEFAULT_SIZE),
+        )
+        return DtoMapper.toDto(findByNamePrefix.execute(prefix, paging))
     }
 
     /**

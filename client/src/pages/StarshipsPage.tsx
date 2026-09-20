@@ -8,6 +8,9 @@ import { S } from '../strings';
 
 const F = S.ship.fields;
 
+type ShipFilters = { id: string; name: string };
+const EMPTY_FILTERS: ShipFilters = { id: '', name: '' };
+
 type ModalState =
   | { kind: 'create' }
   | { kind: 'view'; ship: StarshipDto }
@@ -17,6 +20,8 @@ type ModalState =
 
 /** Корабли: та же раскладка, что и у десантников — таблица, сортировка, страницы, карточка по клику. */
 export function StarshipsPage({ client }: { client: SoaClient }) {
+  const [draft, setDraft] = useState<ShipFilters>(EMPTY_FILTERS);
+  const [applied, setApplied] = useState<ShipFilters>(EMPTY_FILTERS);
   const [sort, setSort] = useState<string[]>([]);
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(20);
@@ -39,7 +44,7 @@ export function StarshipsPage({ client }: { client: SoaClient }) {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    void client.listStarships(sort, page, size).then((r) => {
+    void client.listStarships(applied, sort, page, size).then((r) => {
       if (cancelled) return;
       setLoading(false);
       if (r.ok) {
@@ -52,7 +57,7 @@ export function StarshipsPage({ client }: { client: SoaClient }) {
     return () => {
       cancelled = true;
     };
-  }, [client, sort, page, size, version]);
+  }, [client, applied, sort, page, size, version]);
 
   useEffect(() => {
     let cancelled = false;
@@ -171,6 +176,19 @@ export function StarshipsPage({ client }: { client: SoaClient }) {
     setSort((cur) => toggleSortToken(cur, field));
   };
 
+  const applyFilters = () => {
+    setApplied(draft);
+    setPage(0);
+  };
+
+  const resetFilters = () => {
+    setDraft(EMPTY_FILTERS);
+    setApplied(EMPTY_FILTERS);
+    setPage(0);
+  };
+
+  const activeFilters = Object.values(applied).filter((v) => v.trim() !== '').length;
+
   const modalErrorBlock = modalError && (
     <div className="mb-3">
       <ErrorAlert error={modalError} />
@@ -197,6 +215,28 @@ export function StarshipsPage({ client }: { client: SoaClient }) {
           </button>
         }
       />
+
+      <div className="collapse collapse-arrow mb-4 bg-base-100 shadow-sm">
+        <input type="checkbox" defaultChecked />
+        <div className="collapse-title flex items-center gap-2 font-semibold">
+          {S.common.filters}
+          {activeFilters > 0 && <span className="badge badge-primary badge-sm">{activeFilters}</span>}
+        </div>
+        <div className="collapse-content">
+          <div className="grid grid-cols-2 gap-x-4 md:grid-cols-4">
+            <TextField label={F.id} value={draft.id} onChange={(v) => setDraft({ ...draft, id: v })} />
+            <TextField label={F.name} value={draft.name} onChange={(v) => setDraft({ ...draft, name: v })} />
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <button type="button" className="btn btn-sm btn-primary" onClick={applyFilters}>
+              {S.common.apply}
+            </button>
+            <button type="button" className="btn btn-sm btn-ghost" onClick={resetFilters}>
+              {S.common.reset}
+            </button>
+          </div>
+        </div>
+      </div>
 
       {error && (
         <div className="mb-4">

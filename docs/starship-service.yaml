@@ -21,7 +21,25 @@ paths:
       tags: [Starship CRUD]
       operationId: listStarships
       summary: Получить страницу кораблей
+      description: Фильтры объединяются по «И», сравнение — на точное совпадение.
       parameters:
+        - name: id
+          in: query
+          description: Фильтр по полю `id` (точное совпадение)
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+          example: 1
+        - name: name
+          in: query
+          description: Фильтр по полю `name` (точное совпадение)
+          required: false
+          schema:
+            type: string
+            minLength: 1
+          example: Macragge's Honour
         - name: sort
           in: query
           description: >

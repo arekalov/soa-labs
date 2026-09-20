@@ -397,7 +397,7 @@ paths:
       operationId: findSpaceMarinesByNamePrefix
       summary: Найти объекты, значение поля name которых начинается с заданной подстроки
       description: |
-        Возвращает массив объектов коллекции, значение поля `name` которых
+        Возвращает страницу объектов коллекции, значение поля `name` которых
         начинается с заданной подстроки. Сравнение чувствительно к регистру,
         объекты упорядочены по возрастанию `id`.
       parameters:
@@ -409,15 +409,33 @@ paths:
             type: string
             minLength: 1
           example: Brother
+        - name: page
+          in: query
+          description: Порядковый номер выводимой страницы (начиная с 0)
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+            default: 0
+          example: 0
+        - name: size
+          in: query
+          description: Размер выводимой страницы (количество элементов на странице)
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            default: 20
+          example: 20
       responses:
         '200':
-          description: Массив найденных объектов (возможно, пустой)
+          description: Страница найденных объектов (возможно, пустая)
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/SpaceMarine'
+                $ref: '#/components/schemas/SpaceMarinePage'
         '400':
           $ref: '#/components/responses/BadRequest'
         '500':

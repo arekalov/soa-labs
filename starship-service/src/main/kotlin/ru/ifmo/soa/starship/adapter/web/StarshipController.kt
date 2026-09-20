@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController
 import ru.ifmo.soa.starship.application.error.InvalidParameterException
 import ru.ifmo.soa.starship.application.query.Page
 import ru.ifmo.soa.starship.application.query.StarshipField
+import ru.ifmo.soa.starship.application.query.StarshipFilter
 import ru.ifmo.soa.starship.application.query.StarshipQuery
 import ru.ifmo.soa.starship.application.query.StarshipSort
 import ru.ifmo.soa.starship.application.usecase.BoardSpaceMarine
@@ -112,10 +113,12 @@ class StarshipController(
 
     @GetMapping(value = ["", "/"], produces = [MediaType.APPLICATION_JSON_VALUE])
     fun list(
+        @RequestParam(required = false) id: String?,
+        @RequestParam(required = false) name: String?,
         @RequestParam(required = false) sort: List<String>?,
         @RequestParam(required = false) page: String?,
         @RequestParam(required = false) size: String?,
-    ): StarshipPageDto = listStarships.execute(parseQuery(sort, page, size)).toDto()
+    ): StarshipPageDto = listStarships.execute(parseQuery(id, name, sort, page, size)).toDto()
 
     @PostMapping(value = ["", "/"], produces = [MediaType.APPLICATION_JSON_VALUE])
     fun createGenerated(@RequestBody(required = false) body: StarshipInputDto?): ResponseEntity<StarshipDto> =
@@ -142,7 +145,16 @@ class StarshipController(
 
     // ------------------------------------------------------------- разбор
 
-    private fun parseQuery(sort: List<String>?, page: String?, size: String?): StarshipQuery {
+    private fun parseQuery(id: String?, name: String?, sort: List<String>?, page: String?, size: String?): StarshipQuery {
+        val filter = StarshipFilter(
+            id = id?.let {
+                it.toLongOrNull()?.takeIf { v -> v > 0 }
+                    ?: throw InvalidParameterException("Параметр 'id' должен быть целым числом больше 0")
+            },
+            name = name?.also {
+                if (it.isBlank()) throw InvalidParameterException("Параметр 'name' не может быть пустым")
+            },
+        )
         val sorts = (sort ?: emptyList()).map { token ->
             val descending = token.startsWith('-')
             val field = StarshipField.byApiNameOrNull(if (descending) token.substring(1) else token)
@@ -153,6 +165,7 @@ class StarshipController(
             throw InvalidParameterException("Поле указано в параметре 'sort' более одного раза")
         }
         return StarshipQuery(
+            filter = filter,
             sort = sorts,
             page = intWithMin("page", page, 0, StarshipQuery.DEFAULT_PAGE),
             size = intWithMin("size", size, 1, StarshipQuery.DEFAULT_SIZE),

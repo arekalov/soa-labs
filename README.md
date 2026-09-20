@@ -63,13 +63,13 @@ SpaceMarine Service (`/space-marines`):
 | `DELETE /space-marines/{id}` | удалить |
 | `GET /space-marines/count/by-chapter?name=&parentLegion=` | число десантников заданного ордена |
 | `GET /space-marines/count/by-health-greater-than?health=` | число десантников со здоровьем больше заданного |
-| `GET /space-marines/search/by-name-prefix?prefix=` | десантники, имя которых начинается с подстроки |
+| `GET /space-marines/search/by-name-prefix?prefix=&page=&size=` | страница десантников, имя которых начинается с подстроки |
 
 Starship Service (`/starship`):
 
 | Метод и путь | Назначение |
 |---|---|
-| `GET /starship` | список: `sort` (`id`, `-id`, `name`, `-name`), `page`, `size` |
+| `GET /starship` | список: фильтры `id`, `name` (точное совпадение), `sort` (`id`, `-id`, `name`, `-name`), `page`, `size` |
 | `POST /starship` | создать; идентификатор назначает сервер |
 | `GET /starship/{id}` | получить с составом экипажа |
 | `PATCH /starship/{id}` | переименовать |

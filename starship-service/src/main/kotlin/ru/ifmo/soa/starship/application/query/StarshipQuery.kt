@@ -16,10 +16,24 @@ data class StarshipSort(
     val descending: Boolean,
 )
 
+/** Фильтры списка: точное совпадение, объединяются по «И»; `null` — поле не фильтруется. */
+data class StarshipFilter(
+    val id: Long? = null,
+    val name: String? = null,
+) {
+    fun matches(id: Long, name: String): Boolean =
+        (this.id == null || this.id == id) && (this.name == null || this.name == name)
+
+    companion object {
+        val NONE = StarshipFilter()
+    }
+}
+
 data class StarshipQuery(
-    val sort: List<StarshipSort>,
-    val page: Int,
-    val size: Int,
+    val filter: StarshipFilter = StarshipFilter.NONE,
+    val sort: List<StarshipSort> = emptyList(),
+    val page: Int = DEFAULT_PAGE,
+    val size: Int = DEFAULT_SIZE,
 ) {
     init {
         require(page >= 0) { "page не может быть отрицательной" }

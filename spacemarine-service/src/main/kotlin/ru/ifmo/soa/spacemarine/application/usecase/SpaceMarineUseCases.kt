@@ -7,6 +7,7 @@ import ru.ifmo.soa.spacemarine.application.SpaceMarinePatch
 import ru.ifmo.soa.spacemarine.application.error.SpaceMarineNotFoundException
 import ru.ifmo.soa.spacemarine.application.port.SpaceMarineRepository
 import ru.ifmo.soa.spacemarine.application.query.Page
+import ru.ifmo.soa.spacemarine.application.query.Paging
 import ru.ifmo.soa.spacemarine.application.query.SpaceMarineQuery
 import ru.ifmo.soa.spacemarine.domain.model.SpaceMarine
 import ru.ifmo.soa.spacemarine.domain.model.SpaceMarineDraft
@@ -106,5 +107,5 @@ open class FindSpaceMarinesByNamePrefix @Inject constructor(
     private val repository: SpaceMarineRepository,
 ) {
     @Transactional(Transactional.TxType.SUPPORTS)
-    open fun execute(prefix: String): List<SpaceMarine> = repository.findByNamePrefix(prefix)
+    open fun execute(prefix: String, paging: Paging): Page<SpaceMarine> = repository.findByNamePrefix(prefix, paging)
 }

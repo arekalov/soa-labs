@@ -94,7 +94,6 @@ export const S = {
     prefix: 'Начало имени',
     find: 'Найти',
     marinesCount: 'Десантников',
-    found: (n: number) => `Найдено: ${n}`,
   },
   ship: {
     title: 'Корабли',

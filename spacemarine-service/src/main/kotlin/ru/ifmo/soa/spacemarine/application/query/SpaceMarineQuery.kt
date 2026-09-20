@@ -32,6 +32,19 @@ data class SpaceMarineQuery(
     }
 }
 
+/** Запрошенная страница: для операций, у которых нет фильтров и сортировки. */
+data class Paging(
+    val page: Int,
+    val size: Int,
+) {
+    init {
+        require(page >= 0) { "page не может быть отрицательной" }
+        require(size >= 1) { "size должен быть не меньше 1" }
+    }
+
+    val offset: Long get() = page.toLong() * size
+}
+
 /**
  * Страница результатов.
  *

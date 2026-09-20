@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { SoaClient } from '../api/client';
-import type { ErrorDto, SpaceMarineDto } from '../api/types';
+import type { ErrorDto, SpaceMarinePageDto } from '../api/types';
+import { Pagination } from '../components/Pagination';
 import { EmptyState, ErrorAlert, PageHeader, Panel, TextField } from '../components/ui';
 import { useChapterOptions } from '../hooks/useChapterOptions';
 import { S } from '../strings';
@@ -21,7 +22,11 @@ export function ExtrasPage({ client }: { client: SoaClient }) {
   const [healthError, setHealthError] = useState<ErrorDto | null>(null);
 
   const [prefix, setPrefix] = useState('');
-  const [found, setFound] = useState<SpaceMarineDto[] | null>(null);
+  /** Отправленный префикс: страницы листаются по нему, а не по тому, что сейчас в поле. */
+  const [appliedPrefix, setAppliedPrefix] = useState<string | null>(null);
+  const [prefixPage, setPrefixPage] = useState(0);
+  const [prefixSize, setPrefixSize] = useState(20);
+  const [found, setFound] = useState<SpaceMarinePageDto | null>(null);
   const [prefixError, setPrefixError] = useState<ErrorDto | null>(null);
 
   const countByChapter = async () => {
@@ -46,15 +51,27 @@ export function ExtrasPage({ client }: { client: SoaClient }) {
     }
   };
 
-  const search = async () => {
-    const r = await client.findByNamePrefix(prefix);
-    if (r.ok) {
-      setPrefixError(null);
-      setFound(r.value);
-    } else {
-      setFound(null);
-      setPrefixError(r.error);
-    }
+  useEffect(() => {
+    if (appliedPrefix === null) return;
+    let cancelled = false;
+    void client.findByNamePrefix(appliedPrefix, prefixPage, prefixSize).then((r) => {
+      if (cancelled) return;
+      if (r.ok) {
+        setPrefixError(null);
+        setFound(r.value);
+      } else {
+        setFound(null);
+        setPrefixError(r.error);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [client, appliedPrefix, prefixPage, prefixSize]);
+
+  const search = () => {
+    setPrefixPage(0);
+    setAppliedPrefix(prefix);
   };
 
   return (
@@ -116,7 +133,7 @@ export function ExtrasPage({ client }: { client: SoaClient }) {
             className="flex flex-wrap items-end gap-3"
             onSubmit={(e) => {
               e.preventDefault();
-              void search();
+              search();
             }}
           >
             <div className="w-72">
@@ -125,11 +142,10 @@ export function ExtrasPage({ client }: { client: SoaClient }) {
             <button type="submit" className="btn btn-sm btn-primary mb-1">
               {S.extras.find}
             </button>
-            {found && <span className="mb-2 text-sm opacity-70">{S.extras.found(found.length)}</span>}
           </form>
           {prefixError && <ErrorAlert error={prefixError} onClose={() => setPrefixError(null)} />}
-          {found && found.length === 0 && <EmptyState text={S.common.nothingFound} />}
-          {found && found.length > 0 && (
+          {found && found.items.length === 0 && <EmptyState text={S.common.nothingFound} />}
+          {found && found.items.length > 0 && (
             <div className="overflow-x-auto">
               <table className="table table-zebra table-sm">
                 <thead>
@@ -144,7 +160,7 @@ export function ExtrasPage({ client }: { client: SoaClient }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {found.map((m) => (
+                  {found.items.map((m) => (
                     <tr key={m.id}>
                       <td>{m.id}</td>
                       <td>{m.name}</td>
@@ -158,6 +174,19 @@ export function ExtrasPage({ client }: { client: SoaClient }) {
                 </tbody>
               </table>
             </div>
+          )}
+          {found && found.items.length > 0 && (
+            <Pagination
+              page={found.page}
+              totalPages={found.totalPages}
+              totalElements={found.totalElements}
+              size={prefixSize}
+              onPage={setPrefixPage}
+              onSize={(n) => {
+                setPrefixSize(n);
+                setPrefixPage(0);
+              }}
+            />
           )}
         </Panel>
       </div>
