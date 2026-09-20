@@ -4,7 +4,11 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import org.springframework.web.HttpMediaTypeNotAcceptableException
+import org.springframework.web.HttpMediaTypeNotSupportedException
+import org.springframework.web.HttpRequestMethodNotSupportedException
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
+import org.springframework.web.servlet.NoHandlerFoundException
 import org.springframework.web.servlet.resource.NoResourceFoundException
 import ru.ifmo.soa.starship.application.error.InvalidParameterException
 import ru.ifmo.soa.starship.application.error.SpaceMarineNotFoundException
@@ -43,10 +47,26 @@ class ApiExceptionHandler {
     fun onNotFound(e: RuntimeException) =
         error(HttpStatus.NOT_FOUND, e.message ?: "Ресурс не найден")
 
-    /** Несуществующий маршрут должен давать наш JSON, а не HTML-страницу сервера. */
-    @ExceptionHandler(NoResourceFoundException::class)
-    fun onNoResource(e: NoResourceFoundException) =
+    /**
+     * Несуществующий маршрут должен давать наш JSON с 404, а не HTML сервера и не 500.
+     *
+     * Ловим оба исключения: при отключённых ресурсных маппингах Spring бросает
+     * NoHandlerFoundException, а не NoResourceFoundException, — и без этой строки запрос
+     * на неизвестный путь проваливался в общий обработчик как «внутренняя ошибка».
+     */
+    @ExceptionHandler(NoResourceFoundException::class, NoHandlerFoundException::class)
+    fun onNoRoute(e: Exception) =
         error(HttpStatus.NOT_FOUND, "Запрошенный ресурс не найден")
+
+    /** Путь существует, метод — нет. Статус сохраняем, тело приводим к схеме Error. */
+    @ExceptionHandler(HttpRequestMethodNotSupportedException::class)
+    fun onMethodNotAllowed(e: HttpRequestMethodNotSupportedException) =
+        error(HttpStatus.METHOD_NOT_ALLOWED, "Метод ${e.method} не поддерживается для этого ресурса")
+
+    /** 415 и 406 в спецификации отсутствуют; по смыслу это «запрос не соответствует формату» — 400, как и в первом сервисе. */
+    @ExceptionHandler(HttpMediaTypeNotSupportedException::class, HttpMediaTypeNotAcceptableException::class)
+    fun onMediaType(e: Exception) =
+        error(HttpStatus.BAD_REQUEST, "Запрос не соответствует ожидаемому формату")
 
     @ExceptionHandler(StarshipAlreadyExistsException::class)
     fun onConflict(e: StarshipAlreadyExistsException) =
