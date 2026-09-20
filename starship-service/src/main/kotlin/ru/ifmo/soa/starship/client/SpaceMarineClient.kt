@@ -16,8 +16,6 @@ private const val HTTP_NOT_FOUND = 404
 class SpaceMarineClient(
     private val client: RestClient,
 ) {
-
-    /** @return `true`, если десантник существует в первом сервисе. */
     fun exists(spaceMarineId: Int): Boolean = try {
         client.get()
             .uri("/space-marines/{id}", spaceMarineId)
@@ -28,14 +26,11 @@ class SpaceMarineClient(
                 when (val status = response.statusCode.value()) {
                     HTTP_OK -> true
                     HTTP_NOT_FOUND -> false
-                    // 400 здесь означает наш баг: идентификатор уже проверен на > 0.
                     HTTP_BAD_REQUEST -> throw IllegalStateException(Messages.upstreamRejectedRequest(status))
                     else -> throw SpaceMarineServiceUnavailableException(Messages.upstreamUnexpectedStatus(status))
                 }
             }
     } catch (e: ResourceAccessException) {
-        // Отказ соединения, таймаут, сбой рукопожатия TLS, неразрешимое имя —
-        // для вызывающего это одно и то же.
         throw SpaceMarineServiceUnavailableException(Messages.UPSTREAM_UNAVAILABLE, e)
     }
 }

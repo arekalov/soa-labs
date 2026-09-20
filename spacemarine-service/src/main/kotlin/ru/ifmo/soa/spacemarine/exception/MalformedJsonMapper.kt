@@ -19,7 +19,6 @@ private const val BAD_REQUEST = 400
  */
 @Provider
 class MalformedJsonMapper : ExceptionMapper<JsonProcessingException> {
-
     override fun toResponse(exception: JsonProcessingException): Response =
         Response.status(BAD_REQUEST)
             .type(MediaType.APPLICATION_JSON)

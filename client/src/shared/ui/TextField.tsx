@@ -6,7 +6,6 @@ interface Props {
   onChange: (value: string) => void;
   placeholder?: string;
   hint?: string;
-  /** Подсказка из уже существующих значений; ввод произвольного остаётся возможным. */
   options?: readonly string[];
   autoFocus?: boolean;
 }

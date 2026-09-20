@@ -10,7 +10,6 @@ const F = S.marine.fields;
 /** Десантники, имя которых начинается с заданной подстроки. Результат постраничный. */
 export function SearchMarinesByName() {
   const [prefix, setPrefix] = useState('');
-  /** Отправленный префикс: страницы листаются по нему, а не по тому, что сейчас в поле. */
   const [applied, setApplied] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(20);

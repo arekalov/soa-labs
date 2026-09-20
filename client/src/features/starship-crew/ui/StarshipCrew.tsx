@@ -8,9 +8,7 @@ import { SelectField } from '@/shared/ui';
 
 interface Props {
   starship: StarshipDto;
-  /** Все десантники первого сервиса: для подписей экипажа и выбора при посадке. */
   marines: SpaceMarineDto[];
-  /** Кто уже занят: десантник может находиться только на одном корабле. */
   boarded: Set<number>;
   onChanged: (starship: StarshipDto) => void;
   onMessage: (message: string) => void;
@@ -48,7 +46,6 @@ export function StarshipCrew({ starship, marines, boarded, onChanged, onMessage,
     }
     onMessage(result.value.message);
 
-    // Высадка возвращает описание результата, а не корабль, поэтому состав перечитываем.
     const fresh = await getStarship(starship.id);
     setBusy(false);
     if (fresh.ok) onChanged(fresh.value);

@@ -2,7 +2,6 @@ package ru.ifmo.soa.starship
 
 /** Тексты, уходящие клиенту. Собраны в одном месте, чтобы формулировки не расходились. */
 object Messages {
-
     const val CLASS_NAME = "Starship"
 
     const val BAD_REQUEST = "Некорректный запрос"

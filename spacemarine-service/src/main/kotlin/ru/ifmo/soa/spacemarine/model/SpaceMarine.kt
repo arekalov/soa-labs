@@ -12,13 +12,9 @@ import jakarta.persistence.Table
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
-/** Верхняя граница `coordinates.y`, включительно. */
 const val MAX_COORDINATE_Y = 12.0
 
-/**
- * Postgres хранит `timestamp` с микросекундами, а клиент присылает миллисекунды из ISO-8601.
- * Без среза фильтр по точному равенству `creationDate` не совпал бы никогда.
- */
+/** Postgres хранит микросекунды, клиент присылает миллисекунды: без среза фильтр по creationDate не совпадёт. */
 val TIME_PRECISION: ChronoUnit = ChronoUnit.MILLIS
 
 fun nowTruncated(): Instant = Instant.now().truncatedTo(TIME_PRECISION)
@@ -38,7 +34,6 @@ class SpaceMarine(
     @Embedded
     var coordinates: Coordinates = Coordinates(),
 
-    /** Поле `readOnly` по спецификации, поэтому колонка не обновляется. */
     @Column(name = "creation_date", nullable = false, updatable = false)
     var creationDate: Instant = Instant.EPOCH,
 
@@ -51,10 +46,6 @@ class SpaceMarine(
     @Column(name = "achievements")
     var achievements: String? = null,
 
-    /**
-     * Строкой, а не порядковым номером: иначе таблица нечитаема, а вставка значения
-     * в середину перечисления тихо переразметит существующие строки.
-     */
     @Enumerated(EnumType.STRING)
     @Column(name = "category", nullable = false, length = 16)
     var category: AstartesCategory = AstartesCategory.SCOUT,

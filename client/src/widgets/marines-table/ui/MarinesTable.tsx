@@ -6,7 +6,6 @@ import type { Column } from '@/shared/ui';
 
 const F = S.marine.fields;
 
-/** Колонки соответствуют полям спецификации: по каждой можно и фильтровать, и сортировать. */
 const COLUMNS: Column<SpaceMarineDto>[] = [
   { key: 'id', title: F.id, render: (marine) => marine.id },
   { key: 'name', title: F.name, render: (marine) => marine.name },

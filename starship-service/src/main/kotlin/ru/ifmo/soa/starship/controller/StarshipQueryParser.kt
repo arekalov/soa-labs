@@ -18,7 +18,6 @@ const val SIZE_PARAM = "size"
 /** Сборка [StarshipQuery] из параметров URL. Любое несоответствие схеме — 400. */
 @Component
 class StarshipQueryParser {
-
     fun parse(id: String?, name: String?, sort: List<String>?, page: String?, size: String?): StarshipQuery =
         StarshipQuery(
             filter = parseFilter(id, name),
@@ -50,8 +49,7 @@ class StarshipQueryParser {
             if (descending) Sort.Order.desc(field.apiName) else Sort.Order.asc(field.apiName)
         }.toMutableList()
 
-        // Без стабилизатора порядок строк с равными ключами не гарантирован,
-        // и соседние страницы начнут давать дубли и пропуски.
+        // Без стабилизатора соседние страницы начнут давать дубли и пропуски.
         if (StarshipField.ID !in seen) orders += Sort.Order.asc(StarshipField.ID.apiName)
 
         return Sort.by(orders)

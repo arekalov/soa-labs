@@ -24,14 +24,12 @@ import java.util.logging.Logger
  */
 @RestControllerAdvice
 class GlobalExceptionHandler {
-
     private val log: Logger = Logger.getLogger(GlobalExceptionHandler::class.java.name)
 
     @ExceptionHandler(InvalidParameterException::class)
     fun onInvalidParameter(e: InvalidParameterException) =
         error(HttpStatus.BAD_REQUEST, e.message ?: Messages.BAD_REQUEST)
 
-    /** Нечисловой или переполняющий идентификатор в пути. */
     @ExceptionHandler(MethodArgumentTypeMismatchException::class)
     fun onTypeMismatch(e: MethodArgumentTypeMismatchException) =
         error(HttpStatus.BAD_REQUEST, Messages.paramPositiveInt(e.name))
@@ -43,10 +41,6 @@ class GlobalExceptionHandler {
     )
     fun onNotFound(e: RuntimeException) = error(HttpStatus.NOT_FOUND, e.message ?: Messages.NOT_FOUND)
 
-    /**
-     * При отключённых ресурсных маппингах Spring бросает NoHandlerFoundException,
-     * а не NoResourceFoundException, — ловим оба, иначе неизвестный путь даст 500.
-     */
     @ExceptionHandler(NoResourceFoundException::class, NoHandlerFoundException::class)
     fun onNoRoute(e: Exception) = error(HttpStatus.NOT_FOUND, Messages.ROUTE_NOT_FOUND)
 
@@ -54,7 +48,6 @@ class GlobalExceptionHandler {
     fun onMethodNotAllowed(e: HttpRequestMethodNotSupportedException) =
         error(HttpStatus.METHOD_NOT_ALLOWED, Messages.methodNotAllowed(e.method))
 
-    /** 415 и 406 спецификация не описывает; по смыслу это «запрос не соответствует формату». */
     @ExceptionHandler(HttpMediaTypeNotSupportedException::class, HttpMediaTypeNotAcceptableException::class)
     fun onMediaType(e: Exception) = error(HttpStatus.BAD_REQUEST, Messages.WRONG_FORMAT)
 
@@ -69,7 +62,6 @@ class GlobalExceptionHandler {
     fun onUnreadableBody(e: HttpMessageNotReadableException) =
         error(HttpStatus.BAD_REQUEST, Messages.MALFORMED_JSON)
 
-    /** Именно 503: спецификация описывает этот случай явно, а 502 в ней отсутствует. */
     @ExceptionHandler(SpaceMarineServiceUnavailableException::class)
     fun onUpstreamUnavailable(e: SpaceMarineServiceUnavailableException): ResponseEntity<ErrorDto> {
         log.log(Level.WARNING, Messages.UPSTREAM_DOWN, e)

@@ -33,7 +33,6 @@ import java.util.Optional
  * без Spring, без базы и без сети.
  */
 class StarshipServiceTest {
-
     private val repository: StarshipRepository = mock()
     private val spaceMarines: SpaceMarineClient = mock()
     private val service = StarshipService(repository, spaceMarines)
@@ -48,8 +47,6 @@ class StarshipServiceTest {
         whenever(repository.save(any<Starship>())).thenAnswer { it.arguments[0] as Starship }
         return starship
     }
-
-    // ------------------------------------------------------------- создание
 
     @Test
     @DisplayName("корабль создаётся с идентификатором из пути, а не сгенерированным")
@@ -107,8 +104,6 @@ class StarshipServiceTest {
             .isInstanceOf(StarshipValidationException::class.java)
     }
 
-    // ---------------------------------------------------------- чтение и сверка
-
     @Test
     @DisplayName("удалённый в первом сервисе десантник снимается с борта при чтении")
     fun `reading drops marines that no longer exist`() {
@@ -152,8 +147,6 @@ class StarshipServiceTest {
 
         assertThatThrownBy { service.getById(99L) }.isInstanceOf(StarshipNotFoundException::class.java)
     }
-
-    // ------------------------------------------------------------- посадка
 
     @Test
     @DisplayName("посадка проверяет десантника в первом сервисе и добавляет его в экипаж")
@@ -204,8 +197,6 @@ class StarshipServiceTest {
 
         verify(repository, never()).save(any<Starship>())
     }
-
-    // ------------------------------------------------------------- высадка
 
     @Test
     @DisplayName("высадка снимает десантника с борта")
@@ -271,8 +262,6 @@ class StarshipServiceTest {
 
         verify(repository, never()).findById(any())
     }
-
-    // ----------------------------------------------------- переименование и удаление
 
     @Test
     @DisplayName("переименование меняет только название")

@@ -4,11 +4,9 @@ package ru.ifmo.soa.spacemarine.query
 enum class FieldType {
     POSITIVE_INT,
     INT,
-    /** Вещественное с верхней границей. */
     BOUNDED_DOUBLE,
     POSITIVE_FLOAT,
     BOOLEAN,
-    /** Момент времени в ISO-8601. */
     INSTANT,
     NON_BLANK_STRING,
     STRING,

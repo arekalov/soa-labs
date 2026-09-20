@@ -26,18 +26,15 @@ private const val LIKE_ESCAPE = '\\'
  */
 @ApplicationScoped
 open class SpaceMarineRepository {
-
-    // Поле закрытое намеренно: у protected-свойства Kotlin генерирует финальный геттер,
-    // и Weld отказывается строить прокси для normal-scoped бина (WELD-001480).
+    // Приватное намеренно: у protected-свойства Kotlin генерирует финальный геттер,
+    // и Weld отказывается строить прокси для бина (WELD-001480).
     @PersistenceContext(unitName = PERSISTENCE_UNIT)
     private lateinit var em: EntityManager
 
     open fun findById(id: Int): SpaceMarine? = em.find(SpaceMarine::class.java, id)
 
-    /** Новый элемент сохраняется, существующий обновляется. Идентификатор выдаёт база. */
     open fun save(marine: SpaceMarine): SpaceMarine {
         val saved = if (marine.id == null) marine.also(em::persist) else em.merge(marine)
-        // Идентификатор нужен в ответе 201, а нарушения ограничений БД — до выхода из метода.
         em.flush()
         return saved
     }
@@ -71,8 +68,6 @@ open class SpaceMarineRepository {
         val cb = em.criteriaBuilder
         val chapter = root.get<Chapter>("chapter")
         val conditions = mutableListOf(cb.equal(chapter.get<String>("name"), name))
-        // Отсутствие параметра означает «любой легион»: спецификация помечает его
-        // необязательным и семантику пропуска не описывает.
         if (parentLegion != null) {
             conditions += cb.equal(chapter.get<String>("parentLegion"), parentLegion)
         }
@@ -112,11 +107,10 @@ open class SpaceMarineRepository {
         return em.createQuery(cq).singleResult
     }
 
-    /** Заодно прикрывает переполнение `setFirstResult`, который принимает только `Int`. */
     private fun isPageBeyond(total: Long, offset: Long): Boolean =
         total == 0L || offset >= total || offset > Int.MAX_VALUE
 
-    /** Префикс — буквальная строка, а не шаблон: иначе «50%» нашёл бы всё, что начинается с «50». */
+    /** Префикс — буквальная строка: иначе «50%» нашёл бы всё, что начинается с «50». */
     private fun escapeLike(value: String): String = value
         .replace("\\", "\\\\")
         .replace("%", "\\%")
@@ -135,7 +129,7 @@ open class SpaceMarineRepository {
             val path = root.resolve<Any>(spec.field)
             if (spec.descending) cb.desc(path) else cb.asc(path)
         }
-        // Без стабилизатора Postgres не гарантирует порядок строк с равными ключами,
+        // Без стабилизатора порядок строк с равными ключами не гарантирован,
         // и соседние страницы начнут давать дубли и пропуски.
         if (sort.none { it.field == SpaceMarineField.ID }) {
             result += cb.asc(root.get<Int>("id"))

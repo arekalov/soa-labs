@@ -21,3 +21,6 @@ client/dist/
 .idea/
 *.iml
 out/
+
+# временные файлы Word
+~$*

@@ -16,7 +16,7 @@ import ru.ifmo.soa.starship.dto.StarshipDto
 import ru.ifmo.soa.starship.dto.StarshipInputDto
 import ru.ifmo.soa.starship.dto.StarshipPageDto
 import ru.ifmo.soa.starship.dto.UnloadResultDto
-import ru.ifmo.soa.starship.mapper.StarshipMapper
+import ru.ifmo.soa.starship.mapper.toDto
 import ru.ifmo.soa.starship.service.StarshipService
 
 /**
@@ -31,13 +31,6 @@ class StarshipController(
     private val service: StarshipService,
     private val queryParser: StarshipQueryParser,
 ) {
-
-    // ------------------------------------------------------ спецификация ЛР1
-
-    /**
-     * Вариантов пути три, потому что пустое название даёт `/create/1/` или `/create/1`.
-     * Без них такой запрос ушёл бы в 404, тогда как спецификация требует 400.
-     */
     @PostMapping(
         value = ["/create/{id}/{name}", "/create/{id}", "/create/{id}/"],
         produces = [MediaType.APPLICATION_JSON_VALUE],
@@ -47,9 +40,8 @@ class StarshipController(
         @PathVariable(required = false) name: String?,
     ): ResponseEntity<StarshipDto> = ResponseEntity
         .status(HttpStatus.CREATED)
-        .body(StarshipMapper.toDto(service.createWithId(id, name)))
+        .body(service.createWithId(id, name).toDto())
 
-    /** Имена переменных пути записаны через дефис — ровно как в спецификации. */
     @PostMapping(value = ["/{starship-id}/unload/{space-marine-id}"], produces = [MediaType.APPLICATION_JSON_VALUE])
     fun unload(
         @PathVariable("starship-id") starshipId: Long,
@@ -59,8 +51,6 @@ class StarshipController(
         return UnloadResultDto(starshipId, spaceMarineId, Messages.unloaded(starshipId, spaceMarineId))
     }
 
-    // ------------------------------------------------------- базовые операции
-
     @GetMapping(value = ["", "/"], produces = [MediaType.APPLICATION_JSON_VALUE])
     fun list(
         @RequestParam(required = false) id: String?,
@@ -68,19 +58,19 @@ class StarshipController(
         @RequestParam(required = false) sort: List<String>?,
         @RequestParam(required = false) page: String?,
         @RequestParam(required = false) size: String?,
-    ): StarshipPageDto = StarshipMapper.toDto(service.list(queryParser.parse(id, name, sort, page, size)))
+    ): StarshipPageDto = service.list(queryParser.parse(id, name, sort, page, size)).toDto()
 
     @PostMapping(value = ["", "/"], produces = [MediaType.APPLICATION_JSON_VALUE])
     fun create(@RequestBody(required = false) body: StarshipInputDto?): ResponseEntity<StarshipDto> = ResponseEntity
         .status(HttpStatus.CREATED)
-        .body(StarshipMapper.toDto(service.create(body?.name)))
+        .body(service.create(body?.name).toDto())
 
     @GetMapping(value = ["/{id}"], produces = [MediaType.APPLICATION_JSON_VALUE])
-    fun getById(@PathVariable id: Long): StarshipDto = StarshipMapper.toDto(service.getById(id))
+    fun getById(@PathVariable id: Long): StarshipDto = service.getById(id).toDto()
 
     @PatchMapping(value = ["/{id}"], produces = [MediaType.APPLICATION_JSON_VALUE])
     fun rename(@PathVariable id: Long, @RequestBody(required = false) body: StarshipInputDto?): StarshipDto =
-        StarshipMapper.toDto(service.rename(id, body?.name))
+        service.rename(id, body?.name).toDto()
 
     @DeleteMapping(value = ["/{id}"])
     fun delete(@PathVariable id: Long): ResponseEntity<Void> {
@@ -92,5 +82,5 @@ class StarshipController(
     fun board(
         @PathVariable("starship-id") starshipId: Long,
         @PathVariable("space-marine-id") spaceMarineId: Int,
-    ): StarshipDto = StarshipMapper.toDto(service.board(starshipId, spaceMarineId))
+    ): StarshipDto = service.board(starshipId, spaceMarineId).toDto()
 }

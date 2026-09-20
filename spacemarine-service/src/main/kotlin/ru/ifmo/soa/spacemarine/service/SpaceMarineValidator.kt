@@ -14,21 +14,22 @@ import ru.ifmo.soa.spacemarine.model.MAX_COORDINATE_Y
  * массив `details` со всеми нарушениями.
  */
 object SpaceMarineValidator {
-
     fun validate(input: SpaceMarineInputDto) {
         val violations = mutableListOf<String>()
 
+        val name = input.name
         when {
-            input.name == null -> violations += violation("name", Messages.FIELD_NULL)
-            input.name.isBlank() -> violations += violation("name", Messages.FIELD_BLANK)
+            name == null -> violations += violation("name", Messages.FIELD_NULL)
+            name.isBlank() -> violations += violation("name", Messages.FIELD_BLANK)
         }
 
         validateCoordinates(input.coordinates, violations)
 
+        val health = input.health
         when {
-            input.health == null -> violations += violation("health", Messages.FIELD_NULL)
-            // Через отрицание намеренно: так отсекается и NaN, который прошёл бы проверку `health <= 0`.
-            !(input.health > 0f) -> violations += violation("health", Messages.FIELD_NOT_POSITIVE)
+            health == null -> violations += violation("health", Messages.FIELD_NULL)
+            // Через отрицание намеренно: так отсекается и NaN.
+            !(health > 0f) -> violations += violation("health", Messages.FIELD_NOT_POSITIVE)
         }
 
         if (input.loyal == null) violations += violation("loyal", Messages.FIELD_NULL)
@@ -52,7 +53,6 @@ object SpaceMarineValidator {
         }
     }
 
-    /** Орден целиком необязателен, но если он задан, название обязано быть непустым. */
     private fun validateChapter(chapter: ChapterDto?, violations: MutableList<String>) {
         if (chapter == null) return
         when {

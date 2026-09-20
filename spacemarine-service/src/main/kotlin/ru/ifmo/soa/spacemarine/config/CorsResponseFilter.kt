@@ -17,16 +17,12 @@ private const val ALLOW_PRIVATE_NETWORK = "Access-Control-Allow-Private-Network"
  */
 @Provider
 class CorsResponseFilter : ContainerResponseFilter {
-
     override fun filter(request: ContainerRequestContext, response: ContainerResponseContext) {
         with(response.headers) {
             putSingle(ALLOW_ORIGIN, "*")
             putSingle(ALLOW_METHODS, "GET, POST, PUT, PATCH, DELETE, OPTIONS")
             putSingle(ALLOW_HEADERS, "Content-Type, Accept")
             putSingle(MAX_AGE, "3600")
-            // Chromium: страница с публичного сайта обращается к localhost через SSH-туннель.
-            // Без этого заголовка браузер режет запрос ещё на preflight, подписывая отказ
-            // как «blocked by CORS policy» — политика Private Network Access.
             putSingle(ALLOW_PRIVATE_NETWORK, "true")
         }
     }

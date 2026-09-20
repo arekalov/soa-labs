@@ -3,6 +3,7 @@ import type { PageKey } from '@/widgets/sidebar';
 
 const PAGES: PageKey[] = ['marines', 'extras', 'starships'];
 
+// Раздел живёт в хеше адреса, чтобы переживать обновление страницы.
 function pageFromHash(): PageKey {
   const key = window.location.hash.replace(/^#\/?/, '');
   return (PAGES as string[]).includes(key) ? (key as PageKey) : 'marines';

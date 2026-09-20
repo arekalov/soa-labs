@@ -10,11 +10,9 @@ private val CATEGORIES = AstartesCategory.entries.joinToString(", ") { it.name }
  * между контроллером, сервисом и обработчиком ошибок.
  */
 object Messages {
-
     const val CLASS_NAME = "SpaceMarine"
 
     const val BAD_REQUEST = "Некорректный запрос"
-    const val MALFORMED_BODY = "Некорректное тело запроса"
     const val MALFORMED_JSON = "Тело запроса не является корректным JSON либо не соответствует ожидаемой схеме"
     const val NOT_FOUND = "Элемент не найден"
     const val ROUTE_NOT_FOUND = "Запрошенный ресурс не найден"
@@ -26,8 +24,6 @@ object Messages {
 
     fun marineNotFound(id: Int) = "Элемент с id=$id не найден"
 
-    // --------------------------------------------------------- нарушения полей
-
     const val FIELD_NULL = "поле не может быть null"
     const val FIELD_BLANK = "строка не может быть пустой"
     const val FIELD_NOT_POSITIVE = "значение должно быть больше 0"
@@ -35,8 +31,6 @@ object Messages {
     val FIELD_Y_TOO_BIG = "максимальное значение поля — ${MAX_COORDINATE_Y.toInt()}"
 
     fun violation(path: String, message: String) = "$path: $message"
-
-    // ------------------------------------------------------- параметры запроса
 
     fun paramPositiveInt(name: String) = "Параметр '$name' должен быть целым числом больше 0"
     fun paramInt(name: String) = "Параметр '$name' должен быть целым числом"
@@ -53,13 +47,4 @@ object Messages {
     fun paramUnknownValue(name: String, value: String) = "Параметр '$name' содержит недопустимое значение '$value'"
     fun sortFieldDuplicated(field: String) = "Поле '$field' указано в параметре 'sort' более одного раза"
     fun paramOneOf(name: String) = "Параметр '$name' должен быть одним из: $CATEGORIES"
-
-    // ------------------------------------------------------------- поля тела
-
-    fun bodyString(field: String) = "Поле '$field' должно быть строкой"
-    fun bodyNumber(field: String) = "Поле '$field' должно быть числом"
-    fun bodyInt(field: String) = "Поле '$field' должно быть целым числом"
-    fun bodyBoolean(field: String) = "Поле '$field' должно быть true или false"
-    fun bodyObject(field: String) = "Поле '$field' должно быть объектом"
-    fun bodyOneOf(field: String) = "Поле '$field' должно быть одним из: $CATEGORIES"
 }

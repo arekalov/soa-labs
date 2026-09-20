@@ -22,8 +22,9 @@ import ru.ifmo.soa.spacemarine.dto.CountResultDto
 import ru.ifmo.soa.spacemarine.dto.SpaceMarineDto
 import ru.ifmo.soa.spacemarine.dto.SpaceMarineInputDto
 import ru.ifmo.soa.spacemarine.dto.SpaceMarinePageDto
+import ru.ifmo.soa.spacemarine.config.jsonMapper
 import ru.ifmo.soa.spacemarine.exception.InvalidParameterException
-import ru.ifmo.soa.spacemarine.mapper.SpaceMarineMapper
+import ru.ifmo.soa.spacemarine.mapper.toDto
 import ru.ifmo.soa.spacemarine.query.DEFAULT_PAGE
 import ru.ifmo.soa.spacemarine.query.DEFAULT_SIZE
 import ru.ifmo.soa.spacemarine.service.SpaceMarineService
@@ -42,18 +43,15 @@ import java.net.URI
 open class SpaceMarineController @Inject constructor(
     private val service: SpaceMarineService,
     private val queryParser: SpaceMarineQueryParser,
-    private val patchReader: SpaceMarinePatchReader,
 ) {
-
     @GET
     open fun list(@Context uriInfo: UriInfo): SpaceMarinePageDto =
-        SpaceMarineMapper.toDto(service.search(queryParser.parse(uriInfo)))
+        service.search(queryParser.parse(uriInfo)).toDto()
 
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     open fun create(input: SpaceMarineInputDto?): Response {
-        val dto = SpaceMarineMapper.toDto(service.create(input ?: SpaceMarineInputDto()))
-        // Location спецификацией не описан, но и не запрещён: добавляем как расширение.
+        val dto = service.create(input ?: SpaceMarineInputDto()).toDto()
         return Response.status(Response.Status.CREATED)
             .entity(dto)
             .location(URI.create("/space-marines/${dto.id}"))
@@ -63,19 +61,19 @@ open class SpaceMarineController @Inject constructor(
     @GET
     @Path("/{id}")
     open fun getById(@PathParam("id") rawId: String): SpaceMarineDto =
-        SpaceMarineMapper.toDto(service.getById(parseId(rawId)))
+        service.getById(parseId(rawId)).toDto()
 
     @PUT
     @Path("/{id}")
     @Consumes(MediaType.APPLICATION_JSON)
     open fun replace(@PathParam("id") rawId: String, input: SpaceMarineInputDto?): SpaceMarineDto =
-        SpaceMarineMapper.toDto(service.replace(parseId(rawId), input ?: SpaceMarineInputDto()))
+        service.replace(parseId(rawId), input ?: SpaceMarineInputDto()).toDto()
 
     @PATCH
     @Path("/{id}")
     @Consumes(MediaType.APPLICATION_JSON)
     open fun patch(@PathParam("id") rawId: String, body: ObjectNode?): SpaceMarineDto =
-        SpaceMarineMapper.toDto(service.patch(parseId(rawId), patchReader.read(body)))
+        service.patch(parseId(rawId)) { current -> applyPatch(body, current) }.toDto()
 
     @DELETE
     @Path("/{id}")
@@ -84,10 +82,6 @@ open class SpaceMarineController @Inject constructor(
         return Response.noContent().build()
     }
 
-    /**
-     * Параметры называются `name` и `parentLegion`, а не `chapterName` и `chapterParentLegion`,
-     * как одноимённые фильтры листинга. Это различие задано спецификацией.
-     */
     @GET
     @Path("/count/by-chapter")
     open fun countByChapter(
@@ -113,21 +107,19 @@ open class SpaceMarineController @Inject constructor(
         @QueryParam(SIZE_PARAM) size: String?,
     ): SpaceMarinePageDto {
         if (prefix.isNullOrBlank()) throw InvalidParameterException(Messages.paramRequired("prefix"))
-        return SpaceMarineMapper.toDto(
-            service.findByNamePrefix(
-                prefix = prefix,
-                page = ParamParsers.intWithMin(PAGE_PARAM, page, min = 0, default = DEFAULT_PAGE),
-                size = ParamParsers.intWithMin(SIZE_PARAM, size, min = 1, default = DEFAULT_SIZE),
-            ),
-        )
+        return service.findByNamePrefix(
+            prefix = prefix,
+            page = ParamParsers.intWithMin(PAGE_PARAM, page, min = 0, default = DEFAULT_PAGE),
+            size = ParamParsers.intWithMin(SIZE_PARAM, size, min = 1, default = DEFAULT_SIZE),
+        ).toDto()
     }
 
-    /**
-     * Идентификатор разбирается вручную, а тип параметра — строка.
-     *
-     * Неудачная конвертация `@PathParam` даёт по спецификации JAX-RS код 404, тогда как
-     * спецификация API требует 400. Объявление `id: Int` вернуло бы на `/space-marines/abc`
-     * неверный код, и ограничение шаблона регуляркой не помогло бы.
-     */
+    // Тип параметра — строка: неудачную конвертацию @PathParam JAX-RS превращает в 404,
+    // тогда как спецификация требует 400.
     private fun parseId(rawId: String): Int = ParamParsers.positiveInt("id", rawId)
+
+    // readerForUpdating трогает только поля, физически присутствующие в JSON. Благодаря этому
+    // «поля нет» и «поле равно null» различимы: первое не меняет ничего, второе очищает значение.
+    private fun applyPatch(body: ObjectNode?, current: SpaceMarineInputDto): SpaceMarineInputDto =
+        if (body == null) current else jsonMapper.readerForUpdating(current).readValue(body)
 }

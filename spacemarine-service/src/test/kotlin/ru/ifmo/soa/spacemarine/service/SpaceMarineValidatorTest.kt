@@ -12,7 +12,6 @@ import ru.ifmo.soa.spacemarine.exception.ValidationException
 import ru.ifmo.soa.spacemarine.model.AstartesCategory
 
 class SpaceMarineValidatorTest {
-
     private fun valid(
         name: String? = "Brother Marius",
         coordinates: CoordinatesDto? = CoordinatesDto(10, 3.5),

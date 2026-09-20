@@ -25,10 +25,8 @@ const val SIZE_PARAM = "size"
  */
 @ApplicationScoped
 open class SpaceMarineQueryParser {
-
     open fun parse(uriInfo: UriInfo): SpaceMarineQuery = parse(uriInfo.getQueryParameters(true))
 
-    /** Ядро разбора вынесено на карту параметров, чтобы проверять его без контейнера. */
     open fun parse(params: MultivaluedMap<String, String>): SpaceMarineQuery = SpaceMarineQuery(
         filters = parseFilters(params),
         sort = parseSort(params[SORT_PARAM]),
@@ -41,8 +39,6 @@ open class SpaceMarineQueryParser {
         for (field in SpaceMarineField.entries) {
             val values = params[field.apiName]?.takeIf { it.isNotEmpty() } ?: continue
             if (values.size > 1) {
-                // Фильтр — точное равенство; два значения дали бы конъюнкцию
-                // взаимоисключающих условий, то есть заведомо пустой результат.
                 throw InvalidParameterException(Messages.paramDuplicated(field.apiName))
             }
             filters[field] = ParamParsers.parseFilter(field, values.first())
@@ -63,7 +59,6 @@ open class SpaceMarineQueryParser {
             val field = SpaceMarineField.byApiNameOrNull(if (descending) token.substring(1) else token)
                 ?: throw InvalidParameterException(Messages.paramUnknownValue(SORT_PARAM, token))
 
-            // Повтор поля не имеет смысла: вторая ступень по тому же полю никогда не применится.
             if (!seen.add(field)) throw InvalidParameterException(Messages.sortFieldDuplicated(field.apiName))
 
             result += SortSpec(field, descending)

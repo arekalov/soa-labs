@@ -14,13 +14,11 @@ import ru.ifmo.soa.starship.model.Starship
  */
 @Transactional
 class StarshipInsertImpl : StarshipInsert {
-
     @PersistenceContext
     private lateinit var em: EntityManager
 
     override fun insert(starship: Starship): Starship {
         em.persist(starship)
-        // Нарушение первичного ключа должно всплыть здесь, а не при фиксации транзакции.
         em.flush()
         return starship
     }

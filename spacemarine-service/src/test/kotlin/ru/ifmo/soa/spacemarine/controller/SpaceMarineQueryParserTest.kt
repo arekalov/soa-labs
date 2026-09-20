@@ -12,7 +12,6 @@ import ru.ifmo.soa.spacemarine.query.SpaceMarineField
 import java.time.Instant
 
 class SpaceMarineQueryParserTest {
-
     private val parser = SpaceMarineQueryParser()
 
     private fun params(vararg pairs: Pair<String, String>): MultivaluedMap<String, String> {

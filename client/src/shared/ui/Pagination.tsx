@@ -12,7 +12,6 @@ interface Props {
   onSize: (size: number) => void;
 }
 
-/** Окно номеров вокруг текущей страницы, чтобы полоса не разрасталась. */
 function windowAround(page: number, last: number): number[] {
   const start = Math.max(0, Math.min(page - Math.floor(WINDOW / 2), last - WINDOW + 1));
   const end = Math.min(last, start + WINDOW - 1);

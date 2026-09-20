@@ -39,7 +39,6 @@ class StarshipService(
     private val repository: StarshipRepository,
     private val spaceMarines: SpaceMarineClient,
 ) {
-
     fun list(query: StarshipQuery): Page<Starship> =
         repository.findAll(StarshipSpecifications.of(query.filter), query.pageable).map(::reconcile)
 
@@ -48,13 +47,10 @@ class StarshipService(
         return reconcile(repository.findById(id).orElseThrow { StarshipNotFoundException(id) })
     }
 
-    /** Операция из спецификации ЛР1: идентификатор задаёт клиент. */
     fun createWithId(id: Long, name: String?): Starship {
         requirePositive(id, "id")
         if (name.isNullOrBlank()) throw InvalidParameterException(Messages.paramBlank("name"))
 
-        // Проверка до записи даёт понятный 409 без исключения на обычном пути;
-        // гонку добирает нарушение первичного ключа при вставке.
         if (repository.existsById(id)) throw StarshipAlreadyExistsException(id)
 
         return try {
@@ -64,7 +60,6 @@ class StarshipService(
         }
     }
 
-    /** Базовое создание: номер выдаёт последовательность. */
     fun create(name: String?): Starship =
         repository.insert(Starship(id = repository.nextId(), name = requireName(name)))
 
@@ -90,7 +85,6 @@ class StarshipService(
         repository.findFirstByMarinesContains(spaceMarineId)?.let { occupied ->
             throw SpaceMarineAlreadyOnBoardException(requireNotNull(occupied.id), spaceMarineId)
         }
-        // Иначе на борту оказался бы фантом, которого в первом сервисе нет.
         if (!spaceMarines.exists(spaceMarineId)) throw SpaceMarineNotFoundException(spaceMarineId)
 
         starship.marines += spaceMarineId
@@ -103,26 +97,17 @@ class StarshipService(
 
         val starship = repository.findById(starshipId).orElseThrow { StarshipNotFoundException(starshipId) }
 
-        // Локальная проверка идёт до сетевого вызова: если десантника нет на борту,
+        // Локальная проверка до сетевого вызова: если десантника нет на борту,
         // беспокоить первый сервис незачем.
         if (!starship.hasOnBoard(spaceMarineId)) {
             throw SpaceMarineNotOnBoardException(starshipId, spaceMarineId)
         }
-        // Спецификация предписывает проверить существование десантника в первом сервисе.
         if (!spaceMarines.exists(spaceMarineId)) throw SpaceMarineNotFoundException(spaceMarineId)
 
         starship.marines -= spaceMarineId
         return repository.save(starship)
     }
 
-    /**
-     * Сверка экипажа с первым сервисом.
-     *
-     * Внешнего ключа между сервисами нет, и об удалении десантника нас никто не известит.
-     * Поэтому при чтении состав проверяется, исчезнувшие снимаются с борта, результат
-     * сохраняется. Если первый сервис недоступен, экипаж отдаётся как есть: чтение
-     * не должно ломаться из-за чужого простоя.
-     */
     private fun reconcile(starship: Starship): Starship {
         val alive = try {
             starship.marines.filterTo(mutableSetOf()) { spaceMarines.exists(it) }

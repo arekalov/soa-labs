@@ -8,7 +8,6 @@ import org.springframework.data.domain.Sort
 import ru.ifmo.soa.starship.exception.InvalidParameterException
 
 class StarshipQueryParserTest {
-
     private val parser = StarshipQueryParser()
 
     private fun parse(

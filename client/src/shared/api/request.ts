@@ -61,7 +61,6 @@ async function parseError(response: Response): Promise<ErrorDto> {
       return { code: body.code, message: body.message, details: body.details ?? null };
     }
   } catch {
-    // тело не JSON
   }
   return { code: response.status, message: S.errors.unexpected(response.status) };
 }

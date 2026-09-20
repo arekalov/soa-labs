@@ -16,7 +16,6 @@ import jakarta.ws.rs.ext.Provider
 @Provider
 @PreMatching
 class CorsPreflightFilter : ContainerRequestFilter {
-
     override fun filter(requestContext: ContainerRequestContext) {
         if (requestContext.method == "OPTIONS") {
             requestContext.abortWith(Response.ok().build())

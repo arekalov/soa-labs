@@ -18,6 +18,5 @@ data class SpaceMarineQuery(
         require(size >= 1) { "size должен быть не меньше 1" }
     }
 
-    /** `Long`, чтобы не переполниться на больших номерах страниц. */
     val offset: Long get() = page.toLong() * size
 }

@@ -12,14 +12,11 @@ private const val PREFLIGHT_MAX_AGE = 3600L
  */
 @Configuration
 class CorsConfig : WebMvcConfigurer {
-
     override fun addCorsMappings(registry: CorsRegistry) {
         registry.addMapping("/**")
             .allowedOriginPatterns("*")
             .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
             .allowedHeaders("Content-Type", "Accept")
-            // Chromium: страница с публичного сайта обращается к localhost через SSH-туннель
-            // и требует Access-Control-Allow-Private-Network на preflight.
             .allowPrivateNetwork(true)
             .maxAge(PREFLIGHT_MAX_AGE)
     }

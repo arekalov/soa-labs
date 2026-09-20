@@ -10,7 +10,6 @@ import ru.ifmo.soa.spacemarine.dto.ErrorDto
 import java.util.logging.Level
 import java.util.logging.Logger
 
-/** [Response.Status] не содержит 422 в этой версии Jakarta REST, поэтому коды числами. */
 private const val BAD_REQUEST = 400
 private const val NOT_FOUND = 404
 private const val METHOD_NOT_ALLOWED = 405
@@ -28,7 +27,6 @@ private const val INTERNAL_SERVER_ERROR = 500
  */
 @Provider
 class GlobalExceptionMapper : ExceptionMapper<Throwable> {
-
     private val log: Logger = Logger.getLogger(GlobalExceptionMapper::class.java.name)
 
     override fun toResponse(exception: Throwable): Response {
@@ -41,18 +39,12 @@ class GlobalExceptionMapper : ExceptionMapper<Throwable> {
         exception.find<InvalidParameterException>()?.let {
             return error(BAD_REQUEST, it.message ?: Messages.BAD_REQUEST)
         }
-        exception.find<MalformedRequestBodyException>()?.let {
-            return error(BAD_REQUEST, it.message ?: Messages.MALFORMED_BODY)
-        }
-        // Исключения самого JAX-RS: несуществующий маршрут, неподходящий Content-Type.
-        // Статус сохраняем, тело приводим к схеме Error — иначе клиент получил бы HTML сервера.
         exception.find<WebApplicationException>()?.let { return fromContainer(it) }
 
         log.log(Level.SEVERE, Messages.UNHANDLED_ERROR, exception)
         return error(INTERNAL_SERVER_ERROR, Messages.INTERNAL_ERROR)
     }
 
-    /** Коды 415 и 406 спецификация не описывает; по смыслу это «запрос не соответствует формату». */
     private fun fromContainer(exception: WebApplicationException): Response {
         val status = when (val original = exception.response.status) {
             UNSUPPORTED_MEDIA_TYPE, NOT_ACCEPTABLE -> BAD_REQUEST
@@ -73,7 +65,6 @@ class GlobalExceptionMapper : ExceptionMapper<Throwable> {
             .entity(ErrorDto(status, message, details))
             .build()
 
-    /** Ищет исключение нужного типа по всей цепочке причин: контейнер оборачивает наши ошибки. */
     private inline fun <reified T : Throwable> Throwable.find(): T? {
         var current: Throwable? = this
         while (current != null) {

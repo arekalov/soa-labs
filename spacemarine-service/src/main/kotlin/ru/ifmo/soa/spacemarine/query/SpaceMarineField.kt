@@ -8,10 +8,8 @@ package ru.ifmo.soa.spacemarine.query
  * выводятся как 11 полей на 2 направления.
  */
 enum class SpaceMarineField(
-    /** Имя параметра в HTTP-запросе. */
     val apiName: String,
     val type: FieldType,
-    /** Путь к значению внутри сущности, с учётом встроенных объектов. */
     val entityPath: List<String>,
 ) {
     ID("id", FieldType.POSITIVE_INT, listOf("id")),

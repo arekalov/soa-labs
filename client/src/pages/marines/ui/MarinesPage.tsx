@@ -68,7 +68,6 @@ export function MarinesPage() {
     setVersion((value) => value + 1);
   };
 
-  /** Открытие карточки — отдельный запрос по id, а не данные из строки таблицы. */
   const open = async (id: number) => {
     const result = await getMarine(id);
     if (!result.ok) return setError(result.error);
@@ -84,7 +83,6 @@ export function MarinesPage() {
     else setModalError(result.error);
   };
 
-  /** Изменение — это PATCH с разницей между исходным объектом и формой. */
   const update = async (marine: SpaceMarineDto, input: SpaceMarineInputDto) => {
     const patch = diffInput(marineToInput(marine), input);
     if (Object.keys(patch).length === 0) {

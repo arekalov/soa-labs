@@ -12,7 +12,6 @@ import java.time.format.DateTimeParseException
 
 /** Разбор сырых строк из URL. Любая неудача — 400: значение не соответствует схеме. */
 object ParamParsers {
-
     fun parseFilter(field: SpaceMarineField, raw: String): Any {
         val name = field.apiName
         return when (field.type) {
@@ -32,12 +31,10 @@ object ParamParsers {
         raw.toIntOrNull()?.takeIf { it > 0 }
             ?: throw InvalidParameterException(Messages.paramPositiveInt(name))
 
-    /** Порог для сравнения не обязан быть положительным, важна только конечность. */
     fun finiteFloat(name: String, raw: String): Float =
         raw.toFloatOrNull()?.takeIf { it.isFinite() }
             ?: throw InvalidParameterException(Messages.paramNumber(name))
 
-    /** Пустое значение заменяется на [default]. */
     fun intWithMin(name: String, raw: String?, min: Int, default: Int): Int {
         if (raw == null) return default
         return raw.toIntOrNull()?.takeIf { it >= min }
@@ -60,10 +57,6 @@ object ParamParsers {
         raw.toFloatOrNull()?.takeIf { it.isFinite() && it > 0f }
             ?: throw InvalidParameterException(Messages.paramPositiveNumber(name))
 
-    /**
-     * Строгий разбор: штатный [String.toBoolean] трактует любую строку как `false`,
-     * из-за чего `loyal=maybe` молча превратился бы в фильтр по `false` вместо 400.
-     */
     private fun boolean(name: String, raw: String): Boolean = when (raw.lowercase()) {
         "true" -> true
         "false" -> false

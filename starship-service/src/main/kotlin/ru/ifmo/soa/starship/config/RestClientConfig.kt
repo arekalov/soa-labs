@@ -15,7 +15,6 @@ import javax.net.ssl.TrustManagerFactory
 
 private const val TRUSTSTORE_TYPE = "PKCS12"
 
-/** Таймауты короткие: лучше честный 503, чем повисший запрос на защите. */
 private val CONNECT_TIMEOUT: Duration = Duration.ofSeconds(3)
 private val READ_TIMEOUT: Duration = Duration.ofSeconds(5)
 
@@ -28,7 +27,6 @@ private val READ_TIMEOUT: Duration = Duration.ofSeconds(5)
  */
 @Configuration
 class RestClientConfig {
-
     @Bean
     fun soaSslContext(
         @Value("\${soa.truststore.path}") trustStorePath: String,
@@ -45,7 +43,6 @@ class RestClientConfig {
             .trustManagers
 
         return SSLContext.getInstance("TLS").apply {
-            // Ключей не даём: клиентская аутентификация спецификацией не требуется.
             init(null, trustManagers, null)
         }
     }

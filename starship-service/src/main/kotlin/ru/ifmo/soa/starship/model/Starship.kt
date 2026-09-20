@@ -12,11 +12,6 @@ import jakarta.persistence.Table
 @Entity
 @Table(name = "starship")
 class Starship(
-
-    /**
-     * Без `@GeneratedValue`: идентификатор известен до сохранения — либо пришёл из URL
-     * (эндпоинт спецификации ЛР1), либо взят из последовательности заранее.
-     */
     @Id
     @Column(name = "id", nullable = false)
     var id: Long? = null,
@@ -24,12 +19,8 @@ class Starship(
     @Column(name = "name", nullable = false)
     var name: String = "",
 
-    /**
-     * Идентификаторы десантников из первого сервиса.
-     *
-     * Внешнего ключа на их таблицу нет и быть не может: это другой сервис со своей базой.
-     * Целостность поддерживается вызовом REST, а не СУБД.
-     */
+    // Идентификаторы десантников из первого сервиса. Внешнего ключа на их таблицу нет
+    // и быть не может: целостность поддерживается вызовом REST, а не СУБД.
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "starship_marine", joinColumns = [JoinColumn(name = "starship_id")])
     @Column(name = "space_marine_id", nullable = false)

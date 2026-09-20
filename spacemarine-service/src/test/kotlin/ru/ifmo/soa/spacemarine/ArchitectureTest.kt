@@ -11,7 +11,6 @@ import org.junit.jupiter.api.Test
  * стоит дороже той, что записана только в README.
  */
 class ArchitectureTest {
-
     private val classes = ClassFileImporter()
         .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
         .importPackages("ru.ifmo.soa.spacemarine")

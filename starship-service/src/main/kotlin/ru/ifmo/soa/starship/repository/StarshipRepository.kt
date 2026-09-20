@@ -15,11 +15,8 @@ interface StarshipRepository :
     JpaRepository<Starship, Long>,
     JpaSpecificationExecutor<Starship>,
     StarshipInsert {
-
-    /** Корабль, на борту которого находится десантник. Десантник бывает только на одном. */
     fun findFirstByMarinesContains(spaceMarineId: Int): Starship?
 
-    /** Следующий номер из последовательности колонки `id`, объявленной как identity. */
     @Query(value = "select nextval(pg_get_serial_sequence('starship', 'id'))", nativeQuery = true)
     fun nextId(): Long
 }

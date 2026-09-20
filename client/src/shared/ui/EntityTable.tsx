@@ -8,7 +8,6 @@ import { SortableTh } from './SortableTh';
 import { SortSummary } from './SortSummary';
 
 export interface Column<T> {
-  /** Совпадает с именем поля в параметре `sort`, если колонка сортируемая. */
   key: string;
   title: string;
   sortable?: boolean;
