@@ -321,7 +321,6 @@ export function StarshipsPage({ client }: { client: SoaClient }) {
               items={[
                 { label: F.id, value: modal.ship.id },
                 { label: F.name, value: modal.ship.name },
-                { label: F.crew, value: modal.ship.marines.length },
               ]}
             />
 
