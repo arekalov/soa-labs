@@ -1,0 +1,1122 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-09-20T00:00:00.000Z",
+  "__export_source": "soa-lab2",
+  "resources": [
+    {
+      "_id": "wrk_soa_lab2",
+      "parentId": null,
+      "modified": 0,
+      "created": 0,
+      "name": "СОА ЛР2 — вариант 73126",
+      "description": "Коллекция запросов к обоим сервисам лабораторной работы №2.\n\nПеред работой:\n1. Поднимите туннель к helios:\n   ssh -N -L 24443:127.0.0.1:24443 -L 24543:127.0.0.1:24543 ifmo\n2. Сертификаты сервисов самоподписанные, поэтому в настройках Insomnia\n   выключите проверку сертификатов: Preferences → Request → Validate certificates.\n\nАдреса и подставляемые идентификаторы лежат в окружении Base Environment.",
+      "scope": "collection",
+      "_type": "workspace"
+    },
+    {
+      "_id": "env_base",
+      "parentId": "wrk_soa_lab2",
+      "modified": 0,
+      "created": 0,
+      "name": "Base Environment",
+      "data": {
+        "space_marine": "https://localhost:24443",
+        "starship": "https://localhost:24543/starship",
+        "marine_id": "1",
+        "starship_id": "1"
+      },
+      "dataPropertyOrder": {
+        "&": [
+          "space_marine",
+          "starship",
+          "marine_id",
+          "starship_id"
+        ]
+      },
+      "color": null,
+      "isPrivate": false,
+      "metaSortKey": 0,
+      "_type": "environment"
+    },
+    {
+      "_id": "fld_m_crud",
+      "parentId": "wrk_soa_lab2",
+      "modified": 0,
+      "created": 0,
+      "name": "SpaceMarine · коллекция",
+      "description": "Базовые операции над десантниками",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 0,
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_m_list",
+      "parentId": "fld_m_crud",
+      "modified": 0,
+      "created": 0,
+      "url": "{{ _.space_marine }}/space-marines",
+      "name": "Список",
+      "description": "200. Фильтры по любому полю, sort повторяется и задаёт приоритет ступеней.",
+      "method": "GET",
+      "body": {},
+      "parameters": [
+        {
+          "id": "pair_page_0",
+          "name": "page",
+          "value": "0",
+          "description": "",
+          "disabled": false
+        },
+        {
+          "id": "pair_size_20",
+          "name": "size",
+          "value": "20",
+          "description": "",
+          "disabled": false
+        },
+        {
+          "id": "pair_sort_-health",
+          "name": "sort",
+          "value": "-health",
+          "description": "",
+          "disabled": true
+        },
+        {
+          "id": "pair_sort_name",
+          "name": "sort",
+          "value": "name",
+          "description": "",
+          "disabled": true
+        },
+        {
+          "id": "pair_category_TACTICAL",
+          "name": "category",
+          "value": "TACTICAL",
+          "description": "",
+          "disabled": true
+        },
+        {
+          "id": "pair_loyal_true",
+          "name": "loyal",
+          "value": "true",
+          "description": "",
+          "disabled": true
+        }
+      ],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 1,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_m_create",
+      "parentId": "fld_m_crud",
+      "modified": 0,
+      "created": 0,
+      "url": "{{ _.space_marine }}/space-marines",
+      "name": "Создать",
+      "description": "201. Идентификатор и дату создания присваивает сервер.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Brother Marius\",\n  \"coordinates\": {\n    \"x\": 10,\n    \"y\": 3.5\n  },\n  \"health\": 85.5,\n  \"loyal\": true,\n  \"achievements\": \"Оборона Терры\",\n  \"category\": \"TACTICAL\",\n  \"chapter\": {\n    \"name\": \"Ultramarines\",\n    \"parentLegion\": \"XIII Legion\"\n  }\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_m_get",
+      "parentId": "fld_m_crud",
+      "modified": 0,
+      "created": 0,
+      "url": "{{ _.space_marine }}/space-marines/{{ _.marine_id }}",
+      "name": "Получить по id",
+      "description": "200 либо 404.",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 3,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_m_put",
+      "parentId": "fld_m_crud",
+      "modified": 0,
+      "created": 0,
+      "url": "{{ _.space_marine }}/space-marines/{{ _.marine_id }}",
+      "name": "Заменить целиком",
+      "description": "200. Требуются все обязательные поля, иначе 422 с перечнем нарушений.",
+      "method": "PUT",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Brother Marius\",\n  \"coordinates\": {\n    \"x\": 10,\n    \"y\": 3.5\n  },\n  \"health\": 85.5,\n  \"loyal\": true,\n  \"achievements\": \"Оборона Терры\",\n  \"category\": \"TACTICAL\",\n  \"chapter\": {\n    \"name\": \"Ultramarines\",\n    \"parentLegion\": \"XIII Legion\"\n  }\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 4,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_m_patch",
+      "parentId": "fld_m_crud",
+      "modified": 0,
+      "created": 0,
+      "url": "{{ _.space_marine }}/space-marines/{{ _.marine_id }}",
+      "name": "Изменить часть полей",
+      "description": "200. Меняются только перечисленные поля.",
+      "method": "PATCH",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"health\": 99.0,\n  \"loyal\": false\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 5,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_m_patch_null",
+      "parentId": "fld_m_crud",
+      "modified": 0,
+      "created": 0,
+      "url": "{{ _.space_marine }}/space-marines/{{ _.marine_id }}",
+      "name": "Очистить достижения",
+      "description": "200. Явный null очищает поле; отсутствие поля в теле его не трогает.",
+      "method": "PATCH",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"achievements\": null\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 6,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_m_delete",
+      "parentId": "fld_m_crud",
+      "modified": 0,
+      "created": 0,
+      "url": "{{ _.space_marine }}/space-marines/{{ _.marine_id }}",
+      "name": "Удалить",
+      "description": "204 либо 404.",
+      "method": "DELETE",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 7,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "fld_m_extra",
+      "parentId": "wrk_soa_lab2",
+      "modified": 0,
+      "created": 0,
+      "name": "SpaceMarine · операции варианта",
+      "description": "Три дополнительные операции задания",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 8,
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_m_by_chapter",
+      "parentId": "fld_m_extra",
+      "modified": 0,
+      "created": 0,
+      "url": "{{ _.space_marine }}/space-marines/count/by-chapter",
+      "name": "Число десантников ордена",
+      "description": "200. parentLegion необязателен: без него считаются все легионы.",
+      "method": "GET",
+      "body": {},
+      "parameters": [
+        {
+          "id": "pair_name_Ultramarines",
+          "name": "name",
+          "value": "Ultramarines",
+          "description": "",
+          "disabled": false
+        },
+        {
+          "id": "pair_parentLegion_XIII Legion",
+          "name": "parentLegion",
+          "value": "XIII Legion",
+          "description": "",
+          "disabled": true
+        }
+      ],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 9,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_m_by_health",
+      "parentId": "fld_m_extra",
+      "modified": 0,
+      "created": 0,
+      "url": "{{ _.space_marine }}/space-marines/count/by-health-greater-than",
+      "name": "Число со здоровьем больше заданного",
+      "description": "200.",
+      "method": "GET",
+      "body": {},
+      "parameters": [
+        {
+          "id": "pair_health_50",
+          "name": "health",
+          "value": "50",
+          "description": "",
+          "disabled": false
+        }
+      ],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 10,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_m_by_prefix",
+      "parentId": "fld_m_extra",
+      "modified": 0,
+      "created": 0,
+      "url": "{{ _.space_marine }}/space-marines/search/by-name-prefix",
+      "name": "Поиск по началу имени",
+      "description": "200. Страница объектов, имя которых начинается с подстроки.",
+      "method": "GET",
+      "body": {},
+      "parameters": [
+        {
+          "id": "pair_prefix_Bro",
+          "name": "prefix",
+          "value": "Bro",
+          "description": "",
+          "disabled": false
+        },
+        {
+          "id": "pair_page_0",
+          "name": "page",
+          "value": "0",
+          "description": "",
+          "disabled": false
+        },
+        {
+          "id": "pair_size_20",
+          "name": "size",
+          "value": "20",
+          "description": "",
+          "disabled": false
+        }
+      ],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 11,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "fld_m_err",
+      "parentId": "wrk_soa_lab2",
+      "modified": 0,
+      "created": 0,
+      "name": "SpaceMarine · коды ошибок",
+      "description": "Проверка соответствия спецификации",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 12,
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_m_e400",
+      "parentId": "fld_m_err",
+      "modified": 0,
+      "created": 0,
+      "url": "{{ _.space_marine }}/space-marines/abc",
+      "name": "400 — нечисловой id",
+      "description": "400 с телом схемы Error.",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 13,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_m_e400_sort",
+      "parentId": "fld_m_err",
+      "modified": 0,
+      "created": 0,
+      "url": "{{ _.space_marine }}/space-marines",
+      "name": "400 — недопустимое поле сортировки",
+      "description": "400.",
+      "method": "GET",
+      "body": {},
+      "parameters": [
+        {
+          "id": "pair_sort_weight",
+          "name": "sort",
+          "value": "weight",
+          "description": "",
+          "disabled": false
+        }
+      ],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 14,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_m_e404",
+      "parentId": "fld_m_err",
+      "modified": 0,
+      "created": 0,
+      "url": "{{ _.space_marine }}/space-marines/999999",
+      "name": "404 — несуществующий десантник",
+      "description": "404.",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 15,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_m_e422",
+      "parentId": "fld_m_err",
+      "modified": 0,
+      "created": 0,
+      "url": "{{ _.space_marine }}/space-marines",
+      "name": "422 — пустое тело",
+      "description": "422 с перечнем всех нарушенных ограничений сразу.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 16,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_m_e422_health",
+      "parentId": "fld_m_err",
+      "modified": 0,
+      "created": 0,
+      "url": "{{ _.space_marine }}/space-marines/{{ _.marine_id }}",
+      "name": "422 — здоровье не больше нуля",
+      "description": "422.",
+      "method": "PATCH",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"health\": 0\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 17,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_m_e405",
+      "parentId": "fld_m_err",
+      "modified": 0,
+      "created": 0,
+      "url": "{{ _.space_marine }}/space-marines",
+      "name": "405 — метод не поддерживается",
+      "description": "405.",
+      "method": "PUT",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 18,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "fld_s_lab1",
+      "parentId": "wrk_soa_lab2",
+      "modified": 0,
+      "created": 0,
+      "name": "Starship · операции ЛР1",
+      "description": "Две операции из спецификации первой работы",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 19,
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_s_create_id",
+      "parentId": "fld_s_lab1",
+      "modified": 0,
+      "created": 0,
+      "url": "{{ _.starship }}/create/777/Retribution",
+      "name": "Создать корабль с заданным id",
+      "description": "201 либо 409, если такой id уже занят.",
+      "method": "POST",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 20,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_s_unload",
+      "parentId": "fld_s_lab1",
+      "modified": 0,
+      "created": 0,
+      "url": "{{ _.starship }}/{{ _.starship_id }}/unload/{{ _.marine_id }}",
+      "name": "Высадить десантника",
+      "description": "200 после успешной посадки, 404 — если десантника нет на борту. Существование десантника проверяется обращением к первому сервису; если он недоступен — 503.",
+      "method": "POST",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 21,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "fld_s_crud",
+      "parentId": "wrk_soa_lab2",
+      "modified": 0,
+      "created": 0,
+      "name": "Starship · коллекция",
+      "description": "Базовые операции над кораблями",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 22,
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_s_list",
+      "parentId": "fld_s_crud",
+      "modified": 0,
+      "created": 0,
+      "url": "{{ _.starship }}/",
+      "name": "Список",
+      "description": "200. Завершающий слэш обязателен: без него Tomcat отвечает перенаправлением.",
+      "method": "GET",
+      "body": {},
+      "parameters": [
+        {
+          "id": "pair_page_0",
+          "name": "page",
+          "value": "0",
+          "description": "",
+          "disabled": false
+        },
+        {
+          "id": "pair_size_20",
+          "name": "size",
+          "value": "20",
+          "description": "",
+          "disabled": false
+        },
+        {
+          "id": "pair_sort_-name",
+          "name": "sort",
+          "value": "-name",
+          "description": "",
+          "disabled": true
+        },
+        {
+          "id": "pair_name_Fist of Dorn",
+          "name": "name",
+          "value": "Fist of Dorn",
+          "description": "",
+          "disabled": true
+        }
+      ],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 23,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_s_create",
+      "parentId": "fld_s_crud",
+      "modified": 0,
+      "created": 0,
+      "url": "{{ _.starship }}/",
+      "name": "Создать",
+      "description": "201. Идентификатор назначает сервер.",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Fist of Dorn\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 24,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_s_get",
+      "parentId": "fld_s_crud",
+      "modified": 0,
+      "created": 0,
+      "url": "{{ _.starship }}/{{ _.starship_id }}",
+      "name": "Получить по id",
+      "description": "200. Состав экипажа сверяется с первым сервисом: удалённые там десантники снимаются с борта.",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 25,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_s_rename",
+      "parentId": "fld_s_crud",
+      "modified": 0,
+      "created": 0,
+      "url": "{{ _.starship }}/{{ _.starship_id }}",
+      "name": "Переименовать",
+      "description": "200.",
+      "method": "PATCH",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Macragge's Honour\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 26,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_s_delete",
+      "parentId": "fld_s_crud",
+      "modified": 0,
+      "created": 0,
+      "url": "{{ _.starship }}/{{ _.starship_id }}",
+      "name": "Удалить",
+      "description": "204 либо 404.",
+      "method": "DELETE",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 27,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_s_board",
+      "parentId": "fld_s_crud",
+      "modified": 0,
+      "created": 0,
+      "url": "{{ _.starship }}/{{ _.starship_id }}/board/{{ _.marine_id }}",
+      "name": "Посадить десантника",
+      "description": "200. Десантник может быть только на одном корабле: иначе 409 с указанием корабля.",
+      "method": "POST",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 28,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "fld_s_err",
+      "parentId": "wrk_soa_lab2",
+      "modified": 0,
+      "created": 0,
+      "name": "Starship · коды ошибок",
+      "description": "Проверка соответствия спецификации",
+      "environment": {},
+      "environmentPropertyOrder": null,
+      "metaSortKey": 29,
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_s_e400",
+      "parentId": "fld_s_err",
+      "modified": 0,
+      "created": 0,
+      "url": "{{ _.starship }}/abc",
+      "name": "400 — нечисловой id",
+      "description": "400.",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 30,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_s_e404",
+      "parentId": "fld_s_err",
+      "modified": 0,
+      "created": 0,
+      "url": "{{ _.starship }}/999999",
+      "name": "404 — несуществующий корабль",
+      "description": "404.",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 31,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_s_e409",
+      "parentId": "fld_s_err",
+      "modified": 0,
+      "created": 0,
+      "url": "{{ _.starship }}/{{ _.starship_id }}/board/{{ _.marine_id }}",
+      "name": "409 — десантник уже на борту",
+      "description": "409, если выполнить после успешной посадки.",
+      "method": "POST",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 32,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_s_e422",
+      "parentId": "fld_s_err",
+      "modified": 0,
+      "created": 0,
+      "url": "{{ _.starship }}/{{ _.starship_id }}",
+      "name": "422 — пустое название",
+      "description": "422 с перечнем нарушений.",
+      "method": "PATCH",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 33,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    },
+    {
+      "_id": "req_s_e503",
+      "parentId": "fld_s_err",
+      "modified": 0,
+      "created": 0,
+      "url": "{{ _.starship }}/{{ _.starship_id }}/unload/{{ _.marine_id }}",
+      "name": "503 — первый сервис недоступен",
+      "description": "503, если остановить сервис SpaceMarine и повторить запрос.",
+      "method": "POST",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 34,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request"
+    }
+  ]
+}

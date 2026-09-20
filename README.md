@@ -103,6 +103,15 @@ Starship Service (`/starship`):
 | `POST /starship/{starship-id}/board/{space-marine-id}` | посадить десантника; существование проверяется в первом сервисе, на другом корабле он быть не должен (409) |
 | `POST /starship/{starship-id}/unload/{space-marine-id}` | высадить десантника (ЛР1) |
 
+### Ручные запросы
+
+`docs/soa-lab2.insomnia.json` — коллекция для Insomnia со всеми операциями обоих сервисов,
+включая проверки кодов 400, 404, 405, 409, 422 и 503. Импорт: Application → Preferences →
+Data → Import Data → From File.
+
+Адреса и подставляемые идентификаторы лежат в окружении `Base Environment`. Сертификаты
+самоподписанные, поэтому в Preferences → Request нужно снять галочку Validate certificates.
+
 ### Развёртывание
 
 Первичная настройка сервера выполняется один раз:
