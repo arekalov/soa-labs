@@ -26,6 +26,10 @@ class CorsResponseFilter : ContainerResponseFilter {
             putSingle(ALLOW_METHODS, "GET, POST, PUT, PATCH, DELETE, OPTIONS")
             putSingle(ALLOW_HEADERS, "Content-Type, Accept")
             putSingle(MAX_AGE, "3600")
+            // Chromium: страница с публичного сайта обращается к localhost (через SSH-туннель),
+            // и без этого заголовка браузер режет запрос ещё на preflight, подписывая отказ
+            // как «blocked by CORS policy» — политика Private Network Access.
+            putSingle(ALLOW_PRIVATE_NETWORK, "true")
         }
     }
 
@@ -34,6 +38,7 @@ class CorsResponseFilter : ContainerResponseFilter {
         const val ALLOW_METHODS = "Access-Control-Allow-Methods"
         const val ALLOW_HEADERS = "Access-Control-Allow-Headers"
         const val MAX_AGE = "Access-Control-Max-Age"
+        const val ALLOW_PRIVATE_NETWORK = "Access-Control-Allow-Private-Network"
     }
 }
 

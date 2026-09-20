@@ -19,6 +19,10 @@ class CorsConfiguration : WebMvcConfigurer {
             .allowedOriginPatterns("*")
             .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
             .allowedHeaders("Content-Type", "Accept")
+            // Chromium: страница с публичного сайта обращается к localhost (через SSH-туннель)
+            // и требует Access-Control-Allow-Private-Network на preflight — политика
+            // Private Network Access; без него отказ подписан как «blocked by CORS policy».
+            .allowPrivateNetwork(true)
             .maxAge(3600)
     }
 }
