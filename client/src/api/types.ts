@@ -33,7 +33,6 @@ export interface SpaceMarineDto {
   id: number;
   name: string;
   coordinates: CoordinatesDto;
-  /** Остаётся строкой: клиенту нужно только показать её человеку. */
   creationDate: string;
   health: number;
   loyal: boolean;
@@ -57,18 +56,15 @@ export interface SpaceMarineInputDto {
   chapter?: ChapterDto | null;
 }
 
-export interface SpaceMarinePageDto {
-  items: SpaceMarineDto[];
+export interface PageDto<T> {
+  items: T[];
   page: number;
   size: number;
   totalElements: number;
   totalPages: number;
 }
 
-export interface IdGroupDto {
-  id: number;
-  count: number;
-}
+export type SpaceMarinePageDto = PageDto<SpaceMarineDto>;
 
 export interface CountResultDto {
   count: number;
@@ -79,6 +75,12 @@ export interface StarshipDto {
   name: string;
   marines: number[];
 }
+
+export interface StarshipInputDto {
+  name: string | null;
+}
+
+export type StarshipPageDto = PageDto<StarshipDto>;
 
 export interface UnloadResultDto {
   starshipId: number;

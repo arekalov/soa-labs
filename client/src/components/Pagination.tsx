@@ -1,3 +1,5 @@
+import { S } from '../strings';
+
 interface Props {
   page: number;
   totalPages: number;
@@ -23,7 +25,7 @@ export function Pagination({ page, totalPages, totalElements, size, onPage, onSi
   return (
     <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
       <div className="text-sm opacity-70">
-        Всего элементов: {totalElements} · страница {page + 1} из {Math.max(1, totalPages)}
+        {S.common.total}: {totalElements} · {S.common.page} {page + 1} {S.common.of} {Math.max(1, totalPages)}
       </div>
       <div className="flex items-center gap-3">
         <div className="join">
@@ -48,7 +50,7 @@ export function Pagination({ page, totalPages, totalElements, size, onPage, onSi
         <select className="select select-sm w-28" value={size} onChange={(e) => onSize(Number(e.target.value))}>
           {SIZES.map((s) => (
             <option key={s} value={s}>
-              по {s}
+              {S.common.perPage(s)}
             </option>
           ))}
         </select>

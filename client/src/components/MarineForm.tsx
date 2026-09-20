@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { CATEGORIES, type SpaceMarineDto, type SpaceMarineInputDto } from '../api/types';
-import { Hint, SelectField, TextField, ToggleField } from './ui';
+import type { ChapterOptions } from '../hooks/useChapterOptions';
+import { S } from '../strings';
+import { SelectField, TextField, ToggleField } from './ui';
 
 interface Props {
   initial?: SpaceMarineDto | null;
+  options: ChapterOptions;
   submitLabel: string;
   busy?: boolean;
   onSubmit: (input: SpaceMarineInputDto) => void;
@@ -17,13 +20,26 @@ const numberOrNull = (raw: string): number | null => {
 
 const textOrNull = (raw: string): string | null => (raw.trim() === '' ? null : raw);
 
+/** Полный набор полей десантника в виде тела `SpaceMarineInput`. */
+export function marineToInput(m: SpaceMarineDto): SpaceMarineInputDto {
+  return {
+    name: m.name,
+    coordinates: { x: m.coordinates.x, y: m.coordinates.y },
+    health: m.health,
+    loyal: m.loyal,
+    achievements: m.achievements,
+    category: m.category,
+    chapter: m.chapter ? { name: m.chapter.name, parentLegion: m.chapter.parentLegion } : null,
+  };
+}
+
 /**
- * Одна форма на создание и полную замену: обе операции принимают схему `SpaceMarineInput`.
+ * Одна форма на создание и изменение.
  *
- * Поля не проверяются на клиенте намеренно. Ограничения целостности — зона ответственности
- * сервиса, и задание требует показать пользователю именно его ответ 422 с перечнем нарушений.
+ * Поля не проверяются на клиенте намеренно: ограничения целостности — зона
+ * ответственности сервиса, а его ответ 422 с перечнем нарушений показывается как есть.
  */
-export function MarineForm({ initial, submitLabel, busy, onSubmit, onCancel }: Props) {
+export function MarineForm({ initial, options, submitLabel, busy, onSubmit, onCancel }: Props) {
   const [name, setName] = useState(initial?.name ?? '');
   const [category, setCategory] = useState<string>(initial?.category ?? 'TACTICAL');
   const [health, setHealth] = useState(initial ? String(initial.health) : '');
@@ -47,6 +63,8 @@ export function MarineForm({ initial, submitLabel, busy, onSubmit, onCancel }: P
         : { name: textOrNull(chapterName), parentLegion: textOrNull(chapterLegion) },
   });
 
+  const f = S.marine.fields;
+
   return (
     <form
       onSubmit={(e) => {
@@ -55,20 +73,19 @@ export function MarineForm({ initial, submitLabel, busy, onSubmit, onCancel }: P
       }}
     >
       <div className="grid grid-cols-1 gap-x-4 md:grid-cols-3">
-        <TextField label="Имя" value={name} onChange={setName} />
-        <SelectField label="Категория" value={category} options={CATEGORIES.map((c) => ({ value: c, label: c }))} onChange={setCategory} />
-        <TextField label="Здоровье (> 0)" value={health} onChange={setHealth} />
-        <TextField label="Координата X" value={x} onChange={setX} />
-        <TextField label="Координата Y (≤ 12)" value={y} onChange={setY} />
-        <ToggleField label="Верен Империуму" checked={loyal} onChange={setLoyal} />
-        <TextField label="Достижения" value={achievements} onChange={setAchievements} hint="необязательно" />
-        <TextField label="Орден" value={chapterName} onChange={setChapterName} hint="необязательно; если указан — имя обязательно" />
-        <TextField label="Легион ордена" value={chapterLegion} onChange={setChapterLegion} />
+        <TextField label={f.name} value={name} onChange={setName} autoFocus />
+        <SelectField label={f.category} value={category} options={CATEGORIES.map((c) => ({ value: c, label: c }))} onChange={setCategory} />
+        <TextField label={f.health} value={health} onChange={setHealth} />
+        <TextField label={f.x} value={x} onChange={setX} />
+        <TextField label={f.y} value={y} onChange={setY} />
+        <ToggleField label={f.loyal} checked={loyal} onChange={setLoyal} />
+        <TextField label={f.achievements} value={achievements} onChange={setAchievements} />
+        <TextField label={f.chapter} value={chapterName} onChange={setChapterName} options={options.chapters} />
+        <TextField label={f.legion} value={chapterLegion} onChange={setChapterLegion} options={options.legions} />
       </div>
-      <Hint>Незаполненные поля уходят как отсутствующие — при нарушении ограничений сервис ответит 422 и перечислит, что именно не так.</Hint>
       <div className="modal-action">
         <button type="button" className="btn" onClick={onCancel} disabled={busy}>
-          Отмена
+          {S.common.cancel}
         </button>
         <button type="submit" className="btn btn-primary" disabled={busy}>
           {busy && <span className="loading loading-spinner loading-xs" />}
@@ -77,4 +94,15 @@ export function MarineForm({ initial, submitLabel, busy, onSubmit, onCancel }: P
       </div>
     </form>
   );
+}
+
+const INPUT_KEYS = ['name', 'coordinates', 'health', 'loyal', 'achievements', 'category', 'chapter'] as const;
+
+/** Только изменившиеся поля — тело для PATCH. Пустой объект означает, что менять нечего. */
+export function diffInput(before: SpaceMarineInputDto, after: SpaceMarineInputDto): SpaceMarineInputDto {
+  const patch: Record<string, unknown> = {};
+  for (const key of INPUT_KEYS) {
+    if (JSON.stringify(before[key] ?? null) !== JSON.stringify(after[key] ?? null)) patch[key] = after[key] ?? null;
+  }
+  return patch as SpaceMarineInputDto;
 }

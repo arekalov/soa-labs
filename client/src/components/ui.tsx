@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import type { ErrorDto } from '../api/types';
+import { S } from '../strings';
 
 export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: ReactNode }) {
   return (
@@ -30,13 +31,32 @@ interface TextFieldProps {
   onChange: (value: string) => void;
   placeholder?: string;
   hint?: string;
+  /** Подсказка значений из уже существующих; ввод произвольного значения остаётся возможным. */
+  options?: readonly string[];
+  autoFocus?: boolean;
 }
 
-export function TextField({ label, value, onChange, placeholder, hint }: TextFieldProps) {
+export function TextField({ label, value, onChange, placeholder, hint, options, autoFocus }: TextFieldProps) {
+  const listId = useId();
   return (
     <fieldset className="fieldset">
       <legend className="fieldset-legend">{label}</legend>
-      <input type="text" className="input input-sm w-full" value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
+      <input
+        type="text"
+        className="input input-sm w-full"
+        value={value}
+        placeholder={placeholder}
+        list={options ? listId : undefined}
+        autoFocus={autoFocus}
+        onChange={(e) => onChange(e.target.value)}
+      />
+      {options && (
+        <datalist id={listId}>
+          {options.map((o) => (
+            <option key={o} value={o} />
+          ))}
+        </datalist>
+      )}
       {hint && <p className="label">{hint}</p>}
     </fieldset>
   );
@@ -68,39 +88,29 @@ export function ToggleField({ label, checked, onChange }: { label: string; check
       <legend className="fieldset-legend">{label}</legend>
       <label className="label cursor-pointer gap-2">
         <input type="checkbox" className="toggle toggle-sm toggle-primary" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-        <span className="text-sm">{checked ? 'да' : 'нет'}</span>
+        <span className="text-sm">{checked ? S.common.yes : S.common.no}</span>
       </label>
     </fieldset>
   );
 }
 
-export function TextArea({ label, value, onChange, rows = 4, hint }: { label: string; value: string; onChange: (v: string) => void; rows?: number; hint?: string }) {
+/** Структурированная карточка: подпись — значение. */
+export function DetailList({ items }: { items: { label: string; value: ReactNode }[] }) {
   return (
-    <fieldset className="fieldset">
-      <legend className="fieldset-legend">{label}</legend>
-      <textarea className="textarea textarea-sm w-full font-mono" rows={rows} value={value} onChange={(e) => onChange(e.target.value)} />
-      {hint && <p className="label">{hint}</p>}
-    </fieldset>
+    <dl className="grid grid-cols-[max-content_1fr] gap-x-6 gap-y-2 text-sm">
+      {items.map((it) => (
+        <div key={it.label} className="contents">
+          <dt className="opacity-60">{it.label}</dt>
+          <dd className="font-medium">{it.value}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
-const TITLES: Record<number, string> = {
-  0: 'Нет связи с сервисом',
-  400: 'Некорректный запрос',
-  404: 'Не найдено',
-  409: 'Конфликт',
-  422: 'Данные нарушают ограничения',
-  503: 'Сервис недоступен',
-};
-
-/**
- * Сообщение об ошибке сервиса.
- *
- * Показывает код, текст и перечень нарушенных ограничений из `details` — именно этого
- * требует задание: пользователь должен понять, что данные невалидны и какие именно.
- */
+/** Сообщение об ошибке сервиса: код, текст и перечень нарушенных ограничений, если сервис его прислал. */
 export function ErrorAlert({ error, onClose }: { error: ErrorDto; onClose?: () => void }) {
-  const title = TITLES[error.code] ?? 'Ошибка';
+  const title = S.errors.byCode[error.code] ?? S.errors.other;
   const details = error.details ?? [];
   const tone = error.code === 422 || error.code === 400 || error.code === 409 ? 'alert-warning' : 'alert-error';
   return (
@@ -110,7 +120,7 @@ export function ErrorAlert({ error, onClose }: { error: ErrorDto; onClose?: () =
           {title}
           {error.code > 0 && <span className="badge badge-sm badge-ghost ml-2">{error.code}</span>}
         </div>
-        <div className="text-sm">{error.message}</div>
+        {error.message !== title && <div className="text-sm">{error.message}</div>}
         {details.length > 0 && (
           <ul className="mt-2 list-disc pl-5 text-sm">
             {details.map((d) => (
@@ -120,7 +130,7 @@ export function ErrorAlert({ error, onClose }: { error: ErrorDto; onClose?: () =
         )}
       </div>
       {onClose && (
-        <button type="button" className="btn btn-ghost btn-xs" onClick={onClose} aria-label="Закрыть">
+        <button type="button" className="btn btn-ghost btn-xs" onClick={onClose} aria-label={S.common.close}>
           ✕
         </button>
       )}
@@ -147,7 +157,7 @@ export function Modal({ open, title, onClose, children, wide }: { open: boolean;
       </div>
       <form method="dialog" className="modal-backdrop">
         <button type="button" onClick={onClose}>
-          закрыть
+          {S.common.close}
         </button>
       </form>
     </dialog>
@@ -160,4 +170,56 @@ export function EmptyState({ text }: { text: string }) {
 
 export function Hint({ children }: { children: ReactNode }) {
   return <p className="text-xs opacity-60">{children}</p>;
+}
+
+/** Заголовок сортируемой колонки: клик переключает направление, индекс показывает приоритет ступени. */
+export function SortableTh({ title, mark, onClick }: { title: string; mark: { dir: string; priority: number; multi: boolean } | null; onClick: () => void }) {
+  return (
+    <th className="cursor-pointer select-none whitespace-nowrap hover:bg-base-200" onClick={onClick}>
+      {title}
+      {mark && (
+        <span className="ml-1 text-primary">
+          {mark.dir}
+          {mark.multi && <sup>{mark.priority}</sup>}
+        </span>
+      )}
+    </th>
+  );
+}
+
+/** Строка состояния сортировки над таблицей. */
+export function SortSummary({ sort, loading, onReset }: { sort: string[]; loading: boolean; onReset: () => void }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2 px-4 pt-3 text-sm">
+      <span className="opacity-60">{S.common.sorting}:</span>
+      {sort.length === 0 ? (
+        <span className="opacity-60">{S.common.sortDefault}</span>
+      ) : (
+        <>
+          {sort.map((t) => (
+            <span key={t} className="badge badge-outline badge-sm">
+              {t.startsWith('-') ? `${t.slice(1)} ↓` : `${t} ↑`}
+            </span>
+          ))}
+          <button type="button" className="btn btn-ghost btn-xs" onClick={onReset}>
+            {S.common.reset}
+          </button>
+        </>
+      )}
+      {loading && <span className="loading loading-spinner loading-xs ml-auto" />}
+    </div>
+  );
+}
+
+/** Общая для страниц логика многоступенчатой сортировки: asc → desc → без сортировки. */
+export function toggleSortToken(current: string[], field: string): string[] {
+  if (current.includes(field)) return [...current.filter((t) => t !== field), `-${field}`];
+  if (current.includes(`-${field}`)) return current.filter((t) => t !== `-${field}`);
+  return [...current, field];
+}
+
+export function sortMarkOf(sort: string[], field: string): { dir: string; priority: number; multi: boolean } | null {
+  const i = sort.findIndex((t) => t === field || t === `-${field}`);
+  if (i < 0) return null;
+  return { dir: sort[i] === field ? '↑' : '↓', priority: i + 1, multi: sort.length > 1 };
 }

@@ -1,12 +1,17 @@
 import { useEffect, useState } from 'react';
 import type { SoaClient } from '../api/client';
 import { CATEGORIES, SORTABLE_FIELDS, type ErrorDto, type SortableField, type SpaceMarineDto, type SpaceMarineInputDto, type SpaceMarinePageDto } from '../api/types';
-import { MarineForm } from '../components/MarineForm';
+import { diffInput, MarineForm, marineToInput } from '../components/MarineForm';
 import { Pagination } from '../components/Pagination';
-import { EmptyState, ErrorAlert, Hint, Modal, PageHeader, SelectField, TextArea, TextField, Toast } from '../components/ui';
+import { DetailList, EmptyState, ErrorAlert, Modal, PageHeader, SelectField, SortableTh, SortSummary, sortMarkOf, TextField, Toast, toggleSortToken } from '../components/ui';
+import { useChapterOptions } from '../hooks/useChapterOptions';
+import { useToast } from '../hooks/useToast';
+import { S } from '../strings';
 
 type Filters = Record<SortableField, string>;
 const EMPTY_FILTERS = Object.fromEntries(SORTABLE_FIELDS.map((f) => [f, ''])) as Filters;
+
+const F = S.marine.fields;
 
 interface Column {
   field: SortableField;
@@ -16,39 +21,47 @@ interface Column {
 
 /** Колонки соответствуют полям спецификации один к одному — по каждой можно и фильтровать, и сортировать. */
 const COLUMNS: Column[] = [
-  { field: 'id', title: 'ID', render: (m) => String(m.id) },
-  { field: 'name', title: 'Имя', render: (m) => m.name },
-  { field: 'category', title: 'Категория', render: (m) => m.category },
-  { field: 'health', title: 'Здоровье', render: (m) => String(m.health) },
-  { field: 'loyal', title: 'Верен', render: (m) => (m.loyal ? 'да' : 'нет') },
-  { field: 'coordinatesX', title: 'X', render: (m) => String(m.coordinates.x ?? '—') },
-  { field: 'coordinatesY', title: 'Y', render: (m) => String(m.coordinates.y ?? '—') },
-  { field: 'chapterName', title: 'Орден', render: (m) => m.chapter?.name ?? '—' },
-  { field: 'chapterParentLegion', title: 'Легион', render: (m) => m.chapter?.parentLegion ?? '—' },
-  { field: 'achievements', title: 'Достижения', render: (m) => m.achievements ?? '—' },
-  { field: 'creationDate', title: 'Создан', render: (m) => formatDate(m.creationDate) },
+  { field: 'id', title: F.id, render: (m) => String(m.id) },
+  { field: 'name', title: F.name, render: (m) => m.name },
+  { field: 'category', title: F.category, render: (m) => m.category },
+  { field: 'health', title: F.health, render: (m) => String(m.health) },
+  { field: 'loyal', title: F.loyal, render: (m) => (m.loyal ? S.common.yes : S.common.no) },
+  { field: 'coordinatesX', title: 'X', render: (m) => String(m.coordinates.x ?? S.common.empty) },
+  { field: 'coordinatesY', title: 'Y', render: (m) => String(m.coordinates.y ?? S.common.empty) },
+  { field: 'chapterName', title: F.chapter, render: (m) => m.chapter?.name ?? S.common.empty },
+  { field: 'chapterParentLegion', title: F.legion, render: (m) => m.chapter?.parentLegion ?? S.common.empty },
+  { field: 'achievements', title: F.achievements, render: (m) => m.achievements ?? S.common.empty },
+  { field: 'creationDate', title: F.created, render: (m) => formatDate(m.creationDate) },
 ];
 
-function formatDate(iso: string): string {
+export function formatDate(iso: string): string {
   const d = new Date(iso);
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleString('ru-RU');
 }
 
-/** Человеко-читаемое описание — абзац текста, как требует задание. */
-function describe(m: SpaceMarineDto): string {
-  const chapter = m.chapter ? `Орден — ${m.chapter.name}${m.chapter.parentLegion ? `, легион ${m.chapter.parentLegion}` : ''}.` : 'Орден не указан.';
-  const achievements = m.achievements ? `Достижения: ${m.achievements}.` : 'Достижений нет.';
+/** Карточка десантника: подпись — значение. */
+export function MarineDetails({ marine: m }: { marine: SpaceMarineDto }) {
   return (
-    `Десантник №${m.id} по имени ${m.name}, категория ${m.category}, здоровье ${m.health}, ` +
-    `${m.loyal ? 'верен Империуму' : 'не верен Империуму'}. Находится в точке (${m.coordinates.x}, ${m.coordinates.y}). ` +
-    `Создан ${formatDate(m.creationDate)}. ${chapter} ${achievements}`
+    <DetailList
+      items={[
+        { label: F.id, value: m.id },
+        { label: F.name, value: m.name },
+        { label: F.category, value: m.category },
+        { label: F.health, value: m.health },
+        { label: F.loyal, value: m.loyal ? S.common.yes : S.common.no },
+        { label: F.coordinates, value: `(${m.coordinates.x ?? S.common.empty}; ${m.coordinates.y ?? S.common.empty})` },
+        { label: F.chapter, value: m.chapter?.name ?? S.common.empty },
+        { label: F.legion, value: m.chapter?.parentLegion ?? S.common.empty },
+        { label: F.achievements, value: m.achievements ?? S.common.empty },
+        { label: F.created, value: formatDate(m.creationDate) },
+      ]}
+    />
   );
 }
 
 type ModalState =
   | { kind: 'create' }
   | { kind: 'edit'; marine: SpaceMarineDto }
-  | { kind: 'patch'; marine: SpaceMarineDto }
   | { kind: 'view'; marine: SpaceMarineDto }
   | { kind: 'delete'; marine: SpaceMarineDto }
   | null;
@@ -64,13 +77,13 @@ export function MarinesPage({ client }: { client: SoaClient }) {
   const [data, setData] = useState<SpaceMarinePageDto | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ErrorDto | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, showToast] = useToast();
 
   const [modal, setModal] = useState<ModalState>(null);
   const [modalError, setModalError] = useState<ErrorDto | null>(null);
   const [busy, setBusy] = useState(false);
-  const [patchBody, setPatchBody] = useState('{\n  "achievements": null\n}');
-  const [lookupId, setLookupId] = useState('');
+
+  const options = useChapterOptions(client, version);
 
   useEffect(() => {
     let cancelled = false;
@@ -90,12 +103,6 @@ export function MarinesPage({ client }: { client: SoaClient }) {
     };
   }, [client, applied, sort, page, size, version]);
 
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 3500);
-    return () => clearTimeout(t);
-  }, [toast]);
-
   const refresh = () => setVersion((v) => v + 1);
 
   const closeModal = () => {
@@ -105,24 +112,13 @@ export function MarinesPage({ client }: { client: SoaClient }) {
 
   const succeed = (message: string) => {
     closeModal();
-    setToast(message);
+    showToast(message);
     refresh();
   };
 
-  /** Клик по заголовку: по возрастанию → по убыванию → без сортировки. Порядок кликов задаёт приоритет. */
   const toggleSort = (field: SortableField) => {
     setPage(0);
-    setSort((cur) => {
-      if (cur.includes(field)) return [...cur.filter((t) => t !== field), `-${field}`];
-      if (cur.includes(`-${field}`)) return cur.filter((t) => t !== `-${field}`);
-      return [...cur, field];
-    });
-  };
-
-  const sortMark = (field: SortableField) => {
-    const i = sort.findIndex((t) => t === field || t === `-${field}`);
-    if (i < 0) return null;
-    return { dir: sort[i] === field ? '↑' : '↓', priority: i + 1 };
+    setSort((cur) => toggleSortToken(cur, field));
   };
 
   const applyFilters = () => {
@@ -138,9 +134,9 @@ export function MarinesPage({ client }: { client: SoaClient }) {
 
   const activeFilters = Object.values(applied).filter((v) => v.trim() !== '').length;
 
-  const lookup = async () => {
-    if (lookupId.trim() === '') return;
-    const r = await client.getMarine(lookupId.trim());
+  /** Открытие карточки — отдельный запрос по id, а не данные из строки таблицы. */
+  const open = async (id: number) => {
+    const r = await client.getMarine(id);
     if (r.ok) {
       setError(null);
       setModal({ kind: 'view', marine: r.value });
@@ -153,104 +149,94 @@ export function MarinesPage({ client }: { client: SoaClient }) {
     setBusy(true);
     const r = await client.createMarine(input);
     setBusy(false);
-    if (r.ok) succeed(`Десантник создан, присвоен идентификатор ${r.value.id}.`);
+    if (r.ok) succeed(S.marine.created(r.value.id));
     else setModalError(r.error);
   };
 
-  const replace = async (id: number, input: SpaceMarineInputDto) => {
+  /** Изменение — это PATCH с разницей между исходным объектом и формой. */
+  const update = async (marine: SpaceMarineDto, input: SpaceMarineInputDto) => {
+    const patch = diffInput(marineToInput(marine), input);
+    if (Object.keys(patch).length === 0) {
+      closeModal();
+      showToast(S.common.noChanges);
+      return;
+    }
     setBusy(true);
-    const r = await client.replaceMarine(String(id), input);
+    const r = await client.patchMarine(marine.id, patch);
     setBusy(false);
-    if (r.ok) succeed(`Десантник №${id} полностью заменён.`);
-    else setModalError(r.error);
-  };
-
-  const patch = async (id: number) => {
-    setBusy(true);
-    const r = await client.patchMarine(String(id), patchBody);
-    setBusy(false);
-    if (r.ok) succeed(`Десантник №${id} обновлён.`);
+    if (r.ok) succeed(S.marine.updated(marine.id));
     else setModalError(r.error);
   };
 
   const remove = async (id: number) => {
     setBusy(true);
-    const r = await client.deleteMarine(String(id));
+    const r = await client.deleteMarine(id);
     setBusy(false);
-    if (r.ok) succeed(`Десантник №${id} удалён.`);
+    if (r.ok) succeed(S.marine.deleted(id));
     else setModalError(r.error);
   };
 
   const setF = (field: SortableField) => (v: string) => setDraft({ ...draft, [field]: v });
 
+  const modalErrorBlock = modalError && (
+    <div className="mb-3">
+      <ErrorAlert error={modalError} />
+    </div>
+  );
+
   return (
     <>
       <PageHeader
-        title="Десантники"
-        subtitle="Коллекция объектов SpaceMarine: фильтрация по любому полю, многоступенчатая сортировка, постраничный вывод"
+        title={S.marine.title}
+        subtitle={S.marine.subtitle}
         actions={
-          <>
-            <form
-              className="join"
-              onSubmit={(e) => {
-                e.preventDefault();
-                void lookup();
-              }}
-            >
-              <input className="input input-sm join-item w-28" placeholder="id" value={lookupId} onChange={(e) => setLookupId(e.target.value)} />
-              <button type="submit" className="btn btn-sm join-item">
-                Найти по id
-              </button>
-            </form>
-            <button type="button" className="btn btn-sm btn-primary" onClick={() => setModal({ kind: 'create' })}>
-              + Добавить
-            </button>
-          </>
+          <button type="button" className="btn btn-sm btn-primary" onClick={() => setModal({ kind: 'create' })}>
+            {S.common.add}
+          </button>
         }
       />
 
       <div className="collapse collapse-arrow mb-4 bg-base-100 shadow-sm">
         <input type="checkbox" defaultChecked />
         <div className="collapse-title flex items-center gap-2 font-semibold">
-          Фильтры
+          {S.common.filters}
           {activeFilters > 0 && <span className="badge badge-primary badge-sm">{activeFilters}</span>}
         </div>
         <div className="collapse-content">
           <div className="grid grid-cols-2 gap-x-4 md:grid-cols-4">
-            <TextField label="ID" value={draft.id} onChange={setF('id')} />
-            <TextField label="Имя" value={draft.name} onChange={setF('name')} />
+            <TextField label={F.id} value={draft.id} onChange={setF('id')} />
+            <TextField label={F.name} value={draft.name} onChange={setF('name')} />
             <SelectField
-              label="Категория"
+              label={F.category}
               value={draft.category}
-              options={[{ value: '', label: 'любая' }, ...CATEGORIES.map((c) => ({ value: c, label: c }))]}
+              options={[{ value: '', label: S.common.any }, ...CATEGORIES.map((c) => ({ value: c, label: c }))]}
               onChange={setF('category')}
             />
             <SelectField
-              label="Верен Империуму"
+              label={F.loyal}
               value={draft.loyal}
               options={[
-                { value: '', label: 'не важно' },
-                { value: 'true', label: 'да' },
-                { value: 'false', label: 'нет' },
+                { value: '', label: S.common.anyone },
+                { value: 'true', label: S.common.yes },
+                { value: 'false', label: S.common.no },
               ]}
               onChange={setF('loyal')}
             />
-            <TextField label="Здоровье" value={draft.health} onChange={setF('health')} />
-            <TextField label="Координата X" value={draft.coordinatesX} onChange={setF('coordinatesX')} />
-            <TextField label="Координата Y" value={draft.coordinatesY} onChange={setF('coordinatesY')} />
-            <TextField label="Создан" value={draft.creationDate} onChange={setF('creationDate')} placeholder="2026-09-19T10:26:46.736Z" />
-            <TextField label="Орден" value={draft.chapterName} onChange={setF('chapterName')} />
-            <TextField label="Легион ордена" value={draft.chapterParentLegion} onChange={setF('chapterParentLegion')} />
-            <TextField label="Достижения" value={draft.achievements} onChange={setF('achievements')} />
+            <TextField label={F.health} value={draft.health} onChange={setF('health')} />
+            <TextField label={F.x} value={draft.coordinatesX} onChange={setF('coordinatesX')} />
+            <TextField label={F.y} value={draft.coordinatesY} onChange={setF('coordinatesY')} />
+            <TextField label={F.created} value={draft.creationDate} onChange={setF('creationDate')} placeholder="2026-09-19T10:26:46.736Z" />
+            <TextField label={F.chapter} value={draft.chapterName} onChange={setF('chapterName')} options={options.chapters} />
+            <TextField label={F.legion} value={draft.chapterParentLegion} onChange={setF('chapterParentLegion')} options={options.legions} />
+            <TextField label={F.achievements} value={draft.achievements} onChange={setF('achievements')} />
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <button type="button" className="btn btn-sm btn-primary" onClick={applyFilters}>
-              Применить
+              {S.common.apply}
             </button>
             <button type="button" className="btn btn-sm btn-ghost" onClick={resetFilters}>
-              Сбросить
+              {S.common.reset}
             </button>
-            <Hint>Сравнение точное, условия объединяются по «И». Пустые поля не отправляются.</Hint>
           </div>
         </div>
       </div>
@@ -263,74 +249,40 @@ export function MarinesPage({ client }: { client: SoaClient }) {
 
       <div className="card bg-base-100 shadow-sm">
         <div className="card-body gap-2 p-0">
-          <div className="flex flex-wrap items-center gap-2 px-4 pt-3 text-sm">
-            {sort.length === 0 ? (
-              <span className="opacity-60">Сортировка: по возрастанию id (по умолчанию). Нажмите на заголовок колонки.</span>
-            ) : (
-              <>
-                <span className="opacity-60">Сортировка:</span>
-                {sort.map((t) => (
-                  <span key={t} className="badge badge-outline badge-sm">
-                    {t.startsWith('-') ? `${t.slice(1)} ↓` : `${t} ↑`}
-                  </span>
-                ))}
-                <button type="button" className="btn btn-ghost btn-xs" onClick={() => setSort([])}>
-                  сбросить
-                </button>
-              </>
-            )}
-            {loading && <span className="loading loading-spinner loading-xs ml-auto" />}
-          </div>
+          <SortSummary sort={sort} loading={loading} onReset={() => setSort([])} />
 
           <div className="overflow-x-auto">
             <table className="table table-zebra table-sm">
               <thead>
                 <tr>
-                  {COLUMNS.map((c) => {
-                    const mark = sortMark(c.field);
-                    return (
-                      <th key={c.field} className="cursor-pointer select-none whitespace-nowrap hover:bg-base-200" onClick={() => toggleSort(c.field)}>
-                        {c.title}
-                        {mark && (
-                          <span className="ml-1 text-primary">
-                            {mark.dir}
-                            {sort.length > 1 && <sup>{mark.priority}</sup>}
-                          </span>
-                        )}
-                      </th>
-                    );
-                  })}
-                  <th className="text-right">Действия</th>
+                  {COLUMNS.map((c) => (
+                    <SortableTh key={c.field} title={c.title} mark={sortMarkOf(sort, c.field)} onClick={() => toggleSort(c.field)} />
+                  ))}
+                  <th />
                 </tr>
               </thead>
               <tbody>
                 {data?.items.map((m) => (
-                  <tr key={m.id} className="hover">
+                  <tr key={m.id} className="hover cursor-pointer" onClick={() => void open(m.id)}>
                     {COLUMNS.map((c) => (
                       <td key={c.field} className="max-w-56 truncate">
                         {c.render(m)}
                       </td>
                     ))}
-                    <td className="whitespace-nowrap text-right">
-                      <button type="button" className="btn btn-ghost btn-xs" onClick={() => setModal({ kind: 'view', marine: m })}>
-                        Открыть
-                      </button>
+                    <td className="whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
                       <button type="button" className="btn btn-ghost btn-xs" onClick={() => setModal({ kind: 'edit', marine: m })}>
-                        Изменить
-                      </button>
-                      <button type="button" className="btn btn-ghost btn-xs" onClick={() => setModal({ kind: 'patch', marine: m })}>
-                        PATCH
+                        {S.common.edit}
                       </button>
                       <button type="button" className="btn btn-ghost btn-xs text-error" onClick={() => setModal({ kind: 'delete', marine: m })}>
-                        Удалить
+                        {S.common.delete}
                       </button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            {data && data.items.length === 0 && <EmptyState text="По заданным условиям ничего не найдено" />}
-            {!data && !error && <EmptyState text="Загрузка…" />}
+            {data && data.items.length === 0 && <EmptyState text={S.common.nothingFound} />}
+            {!data && !error && <EmptyState text={S.common.loading} />}
           </div>
 
           {data && (
@@ -353,85 +305,58 @@ export function MarinesPage({ client }: { client: SoaClient }) {
 
       {toast && <Toast message={toast} />}
 
-      <Modal open={modal?.kind === 'create'} title="Новый десантник" onClose={closeModal} wide>
-        {modalError && (
-          <div className="mb-3">
-            <ErrorAlert error={modalError} />
-          </div>
+      <Modal open={modal?.kind === 'create'} title={S.marine.newTitle} onClose={closeModal} wide>
+        {modalErrorBlock}
+        {modal?.kind === 'create' && (
+          <MarineForm options={options} submitLabel={S.common.create} busy={busy} onSubmit={(input) => void create(input)} onCancel={closeModal} />
         )}
-        {modal?.kind === 'create' && <MarineForm submitLabel="Создать" busy={busy} onSubmit={(input) => void create(input)} onCancel={closeModal} />}
       </Modal>
 
-      <Modal open={modal?.kind === 'edit'} title={modal?.kind === 'edit' ? `Замена десантника №${modal.marine.id} (PUT)` : ''} onClose={closeModal} wide>
-        {modalError && (
-          <div className="mb-3">
-            <ErrorAlert error={modalError} />
-          </div>
-        )}
+      <Modal open={modal?.kind === 'edit'} title={modal?.kind === 'edit' ? S.marine.editTitle(modal.marine.id) : ''} onClose={closeModal} wide>
+        {modalErrorBlock}
         {modal?.kind === 'edit' && (
-          <MarineForm initial={modal.marine} submitLabel="Заменить" busy={busy} onSubmit={(input) => void replace(modal.marine.id, input)} onCancel={closeModal} />
+          <MarineForm
+            initial={modal.marine}
+            options={options}
+            submitLabel={S.common.save}
+            busy={busy}
+            onSubmit={(input) => void update(modal.marine, input)}
+            onCancel={closeModal}
+          />
         )}
       </Modal>
 
-      <Modal open={modal?.kind === 'patch'} title={modal?.kind === 'patch' ? `Частичное обновление №${modal.marine.id} (PATCH)` : ''} onClose={closeModal}>
-        {modalError && (
-          <div className="mb-3">
-            <ErrorAlert error={modalError} />
-          </div>
-        )}
-        {modal?.kind === 'patch' && (
-          <>
-            <TextArea
-              label="Тело запроса (JSON)"
-              value={patchBody}
-              onChange={setPatchBody}
-              rows={6}
-              hint='Тело уходит как есть, поэтому различимы «поля нет» и «поле равно null»: {"achievements": null} очистит достижения, а {"name": null} даст 422.'
-            />
-            <div className="modal-action">
-              <button type="button" className="btn" onClick={closeModal} disabled={busy}>
-                Отмена
-              </button>
-              <button type="button" className="btn btn-primary" onClick={() => void patch(modal.marine.id)} disabled={busy}>
-                {busy && <span className="loading loading-spinner loading-xs" />}
-                Применить
-              </button>
-            </div>
-          </>
-        )}
-      </Modal>
-
-      <Modal open={modal?.kind === 'view'} title={modal?.kind === 'view' ? `Десантник №${modal.marine.id}` : ''} onClose={closeModal}>
+      <Modal open={modal?.kind === 'view'} title={modal?.kind === 'view' ? S.marine.viewTitle(modal.marine.id) : ''} onClose={closeModal}>
         {modal?.kind === 'view' && (
           <>
-            <p className="leading-relaxed">{describe(modal.marine)}</p>
+            <MarineDetails marine={modal.marine} />
             <div className="modal-action">
-              <button type="button" className="btn" onClick={closeModal}>
-                Закрыть
+              <button type="button" className="btn btn-ghost text-error" onClick={() => setModal({ kind: 'delete', marine: modal.marine })}>
+                {S.common.delete}
+              </button>
+              <button type="button" className="btn" onClick={() => setModal({ kind: 'edit', marine: modal.marine })}>
+                {S.common.edit}
+              </button>
+              <button type="button" className="btn btn-primary" onClick={closeModal}>
+                {S.common.close}
               </button>
             </div>
           </>
         )}
       </Modal>
 
-      <Modal open={modal?.kind === 'delete'} title="Удалить десантника?" onClose={closeModal}>
-        {modalError && (
-          <div className="mb-3">
-            <ErrorAlert error={modalError} />
-          </div>
-        )}
+      <Modal open={modal?.kind === 'delete'} title={S.marine.deleteTitle} onClose={closeModal}>
+        {modalErrorBlock}
         {modal?.kind === 'delete' && (
           <>
-            <p>
-              Десантник №{modal.marine.id} «{modal.marine.name}» будет удалён без возможности восстановления.
-            </p>
+            <p>{S.marine.deleteText(modal.marine.id, modal.marine.name)}</p>
             <div className="modal-action">
               <button type="button" className="btn" onClick={closeModal} disabled={busy}>
-                Отмена
+                {S.common.cancel}
               </button>
               <button type="button" className="btn btn-error" onClick={() => void remove(modal.marine.id)} disabled={busy}>
                 {busy && <span className="loading loading-spinner loading-xs" />}
-                Удалить
+                {S.common.delete}
               </button>
             </div>
           </>

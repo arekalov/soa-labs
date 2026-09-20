@@ -1,21 +1,19 @@
 import type { Endpoints } from './endpoints';
+import { S } from '../strings';
 import type {
   CountResultDto,
   ErrorDto,
-  IdGroupDto,
   SpaceMarineDto,
   SpaceMarineInputDto,
   SpaceMarinePageDto,
   StarshipDto,
+  StarshipPageDto,
   UnloadResultDto,
 } from './types';
 
 /**
- * Результат обращения к API.
- *
- * Ошибка несёт разобранную схему `Error`, а не только код: задание требует
- * информировать пользователя о том, что именно не так, вплоть до перечня
- * нарушенных ограничений.
+ * Результат обращения к API. Ошибка несёт разобранную схему `Error` целиком:
+ * пользователю показывается и текст, и перечень нарушенных ограничений.
  */
 export type ApiResult<T> = { ok: true; value: T } | { ok: false; error: ErrorDto };
 
@@ -34,12 +32,7 @@ export class SoaClient {
 
   // ------------------------------------------------------------ SpaceMarine
 
-  listMarines(
-    filters: Record<string, string>,
-    sort: string[],
-    page: number,
-    size: number,
-  ): Promise<ApiResult<SpaceMarinePageDto>> {
+  listMarines(filters: Record<string, string>, sort: string[], page: number, size: number): Promise<ApiResult<SpaceMarinePageDto>> {
     const query = new URLSearchParams();
     for (const [key, value] of Object.entries(filters)) {
       if (value.trim() !== '') query.append(key, value);
@@ -51,45 +44,21 @@ export class SoaClient {
     return this.call(`${this.marines}/space-marines?${query}`);
   }
 
-  getMarine(id: string): Promise<ApiResult<SpaceMarineDto>> {
-    return this.call(`${this.marines}/space-marines/${encodeURIComponent(id)}`);
+  getMarine(id: number): Promise<ApiResult<SpaceMarineDto>> {
+    return this.call(`${this.marines}/space-marines/${id}`);
   }
 
   createMarine(input: SpaceMarineInputDto): Promise<ApiResult<SpaceMarineDto>> {
-    return this.call(`${this.marines}/space-marines`, {
-      method: 'POST',
-      headers: JSON_HEADERS,
-      body: JSON.stringify(input),
-    });
+    return this.call(`${this.marines}/space-marines`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(input) });
   }
 
-  replaceMarine(id: string, input: SpaceMarineInputDto): Promise<ApiResult<SpaceMarineDto>> {
-    return this.call(`${this.marines}/space-marines/${encodeURIComponent(id)}`, {
-      method: 'PUT',
-      headers: JSON_HEADERS,
-      body: JSON.stringify(input),
-    });
+  /** Явные `null` в патче сохраняются: JSON.stringify отбрасывает только `undefined`. */
+  patchMarine(id: number, patch: SpaceMarineInputDto): Promise<ApiResult<SpaceMarineDto>> {
+    return this.call(`${this.marines}/space-marines/${id}`, { method: 'PATCH', headers: JSON_HEADERS, body: JSON.stringify(patch) });
   }
 
-  /** Тело уходит сырой строкой: только так клиент может послать явный `null`. */
-  patchMarine(id: string, rawJson: string): Promise<ApiResult<SpaceMarineDto>> {
-    return this.call(`${this.marines}/space-marines/${encodeURIComponent(id)}`, {
-      method: 'PATCH',
-      headers: JSON_HEADERS,
-      body: rawJson,
-    });
-  }
-
-  deleteMarine(id: string): Promise<ApiResult<void>> {
-    return this.call(`${this.marines}/space-marines/${encodeURIComponent(id)}`, { method: 'DELETE' });
-  }
-
-  minHealth(): Promise<ApiResult<SpaceMarineDto>> {
-    return this.call(`${this.marines}/space-marines/health/min`);
-  }
-
-  groupsById(): Promise<ApiResult<IdGroupDto[]>> {
-    return this.call(`${this.marines}/space-marines/groups/by-id`);
+  deleteMarine(id: number): Promise<ApiResult<void>> {
+    return this.call(`${this.marines}/space-marines/${id}`, { method: 'DELETE' });
   }
 
   countByChapter(name: string, parentLegion: string): Promise<ApiResult<CountResultDto>> {
@@ -98,36 +67,62 @@ export class SoaClient {
     return this.call(`${this.marines}/space-marines/count/by-chapter?${query}`);
   }
 
-  // -------------------------------------------------------------- Starship
-
-  createStarship(id: string, name: string): Promise<ApiResult<StarshipDto>> {
-    return this.call(`${this.ships}/create/${encodeURIComponent(id)}/${encodeURIComponent(name)}`, {
-      method: 'POST',
-    });
+  countByHealthGreaterThan(health: string): Promise<ApiResult<CountResultDto>> {
+    return this.call(`${this.marines}/space-marines/count/by-health-greater-than?${new URLSearchParams({ health })}`);
   }
 
-  unload(starshipId: string, spaceMarineId: string): Promise<ApiResult<UnloadResultDto>> {
-    return this.call(
-      `${this.ships}/${encodeURIComponent(starshipId)}/unload/${encodeURIComponent(spaceMarineId)}`,
-      { method: 'POST' },
-    );
+  findByNamePrefix(prefix: string): Promise<ApiResult<SpaceMarineDto[]>> {
+    return this.call(`${this.marines}/space-marines/search/by-name-prefix?${new URLSearchParams({ prefix })}`);
+  }
+
+  // -------------------------------------------------------------- Starship
+
+  listStarships(sort: string[], page: number, size: number): Promise<ApiResult<StarshipPageDto>> {
+    const query = new URLSearchParams();
+    for (const token of sort) query.append('sort', token);
+    query.append('page', String(page));
+    query.append('size', String(size));
+    return this.call(`${this.ships}/?${query}`);
+  }
+
+  getStarship(id: number): Promise<ApiResult<StarshipDto>> {
+    return this.call(`${this.ships}/${id}`);
+  }
+
+  createStarship(name: string): Promise<ApiResult<StarshipDto>> {
+    return this.call(`${this.ships}/`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify({ name }) });
+  }
+
+  renameStarship(id: number, name: string): Promise<ApiResult<StarshipDto>> {
+    return this.call(`${this.ships}/${id}`, { method: 'PATCH', headers: JSON_HEADERS, body: JSON.stringify({ name }) });
+  }
+
+  deleteStarship(id: number): Promise<ApiResult<void>> {
+    return this.call(`${this.ships}/${id}`, { method: 'DELETE' });
+  }
+
+  boardMarine(starshipId: number, spaceMarineId: number): Promise<ApiResult<StarshipDto>> {
+    return this.call(`${this.ships}/${starshipId}/board/${spaceMarineId}`, { method: 'POST' });
+  }
+
+  unloadMarine(starshipId: number, spaceMarineId: number): Promise<ApiResult<UnloadResultDto>> {
+    return this.call(`${this.ships}/${starshipId}/unload/${spaceMarineId}`, { method: 'POST' });
   }
 
   // ----------------------------------------------------------- доступность
 
-  /** Любой HTTP-ответ, даже 4xx, означает, что сервис на связи; исключение — что нет. */
+  /** Любой HTTP-ответ означает, что сервис на связи; исключение — что нет. */
   async pingSpaceMarine(): Promise<boolean> {
-    try {
-      await fetch(`${this.marines}/space-marines?size=1`);
-      return true;
-    } catch {
-      return false;
-    }
+    return this.ping(`${this.marines}/space-marines?size=1`);
   }
 
   async pingStarship(): Promise<boolean> {
+    return this.ping(`${this.ships}/?size=1`);
+  }
+
+  private async ping(url: string): Promise<boolean> {
     try {
-      await fetch(`${this.ships}/create/0/x`, { method: 'POST' });
+      await fetch(url);
       return true;
     } catch {
       return false;
@@ -140,17 +135,16 @@ export class SoaClient {
     let response: Response;
     try {
       response = await fetch(url, init);
-    } catch (e) {
-      return { ok: false, error: transportError(e) };
+    } catch {
+      return { ok: false, error: { code: 0, message: S.errors.byCode[0] } };
     }
 
     if (response.ok) {
-      // 204 у DELETE: тела нет, и читать его нельзя
       if (response.status === 204) return { ok: true, value: undefined as T };
       try {
         return { ok: true, value: (await response.json()) as T };
       } catch {
-        return { ok: false, error: { code: response.status, message: 'Сервис вернул ответ не в формате JSON' } };
+        return { ok: false, error: { code: response.status, message: S.errors.notJson } };
       }
     }
 
@@ -165,25 +159,7 @@ async function parseError(response: Response): Promise<ErrorDto> {
       return { code: body.code, message: body.message, details: body.details ?? null };
     }
   } catch {
-    // тело не JSON — например, страница контейнера
+    // тело не JSON
   }
-  return { code: response.status, message: `Сервис вернул неожиданный ответ: ${response.status} ${response.statusText}` };
-}
-
-/**
- * До сервиса не дошли вовсе.
- *
- * Самая вероятная причина в этой лабораторной — браузер не доверяет самоподписанному
- * сертификату, поэтому подсказка говорит именно об этом, а не про абстрактную сеть.
- */
-function transportError(e: unknown): ErrorDto {
-  return {
-    code: 0,
-    message: 'Не удалось связаться с сервисом',
-    details: [
-      e instanceof Error ? e.message : String(e),
-      'Проверьте, что сервис запущен, туннель поднят и сертификат принят браузером: ' +
-        'откройте адрес сервиса в соседней вкладке и подтвердите исключение.',
-    ],
-  };
+  return { code: response.status, message: S.errors.unexpected(response.status) };
 }

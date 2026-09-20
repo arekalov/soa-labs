@@ -1,149 +1,164 @@
 import { useState } from 'react';
 import type { SoaClient } from '../api/client';
-import type { ErrorDto, IdGroupDto, SpaceMarineDto } from '../api/types';
-import { EmptyState, ErrorAlert, Hint, PageHeader, Panel, TextField } from '../components/ui';
+import type { ErrorDto, SpaceMarineDto } from '../api/types';
+import { EmptyState, ErrorAlert, PageHeader, Panel, TextField } from '../components/ui';
+import { useChapterOptions } from '../hooks/useChapterOptions';
+import { S } from '../strings';
 
-/**
- * Три дополнительные операции первого сервиса.
- *
- * Каждая показана в естественном для неё виде: карточка-показатель для одного объекта,
- * таблица для группировки, число для подсчёта.
- */
+const F = S.marine.fields;
+
+/** Три дополнительные операции первого сервиса — те, что заданы вариантом. */
 export function ExtrasPage({ client }: { client: SoaClient }) {
-  const [error, setError] = useState<ErrorDto | null>(null);
-  const [minHealth, setMinHealth] = useState<SpaceMarineDto | null>(null);
-  const [groups, setGroups] = useState<IdGroupDto[] | null>(null);
-  const [chapterName, setChapterName] = useState('Ultramarines');
-  const [parentLegion, setParentLegion] = useState('');
-  const [count, setCount] = useState<{ text: string; value: number } | null>(null);
-  const [busy, setBusy] = useState<'min' | 'groups' | 'count' | null>(null);
+  const options = useChapterOptions(client);
 
-  const loadMin = async () => {
-    setBusy('min');
-    const r = await client.minHealth();
-    setBusy(null);
+  const [chapter, setChapter] = useState('');
+  const [legion, setLegion] = useState('');
+  const [chapterCount, setChapterCount] = useState<number | null>(null);
+  const [chapterError, setChapterError] = useState<ErrorDto | null>(null);
+
+  const [threshold, setThreshold] = useState('');
+  const [healthCount, setHealthCount] = useState<number | null>(null);
+  const [healthError, setHealthError] = useState<ErrorDto | null>(null);
+
+  const [prefix, setPrefix] = useState('');
+  const [found, setFound] = useState<SpaceMarineDto[] | null>(null);
+  const [prefixError, setPrefixError] = useState<ErrorDto | null>(null);
+
+  const countByChapter = async () => {
+    const r = await client.countByChapter(chapter, legion);
     if (r.ok) {
-      setError(null);
-      setMinHealth(r.value);
+      setChapterError(null);
+      setChapterCount(r.value.count);
     } else {
-      setMinHealth(null);
-      setError(r.error);
+      setChapterCount(null);
+      setChapterError(r.error);
     }
   };
 
-  const loadGroups = async () => {
-    setBusy('groups');
-    const r = await client.groupsById();
-    setBusy(null);
+  const countByHealth = async () => {
+    const r = await client.countByHealthGreaterThan(threshold);
     if (r.ok) {
-      setError(null);
-      setGroups(r.value);
+      setHealthError(null);
+      setHealthCount(r.value.count);
     } else {
-      setGroups(null);
-      setError(r.error);
+      setHealthCount(null);
+      setHealthError(r.error);
     }
   };
 
-  const loadCount = async () => {
-    setBusy('count');
-    const r = await client.countByChapter(chapterName, parentLegion);
-    setBusy(null);
+  const search = async () => {
+    const r = await client.findByNamePrefix(prefix);
     if (r.ok) {
-      setError(null);
-      const legion = parentLegion.trim() === '' ? 'любого легиона' : `легиона «${parentLegion}»`;
-      setCount({ value: r.value.count, text: `В ордене «${chapterName}» (${legion}) числится десантников: ${r.value.count}.` });
+      setPrefixError(null);
+      setFound(r.value);
     } else {
-      setCount(null);
-      setError(r.error);
+      setFound(null);
+      setPrefixError(r.error);
     }
   };
-
-  const spinner = (key: typeof busy) => busy === key && <span className="loading loading-spinner loading-xs" />;
 
   return (
     <>
-      <PageHeader title="Сводные операции" subtitle="Дополнительные операции первого сервиса, размещённые на отдельных URL" />
+      <PageHeader title={S.extras.title} subtitle={S.extras.subtitle} />
 
-      {error && (
-        <div className="mb-4">
-          <ErrorAlert error={error} onClose={() => setError(null)} />
-        </div>
-      )}
-
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Panel title="Минимальное здоровье">
-          <Hint>Вернуть любой объект, значение поля health которого минимально.</Hint>
-          {minHealth && (
-            <div className="stats bg-base-200">
-              <div className="stat">
-                <div className="stat-title">Здоровье</div>
-                <div className="stat-value text-primary">{minHealth.health}</div>
-                <div className="stat-desc">
-                  №{minHealth.id} · {minHealth.name} · {minHealth.category}
-                  {minHealth.chapter?.name ? ` · ${minHealth.chapter.name}` : ''}
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <Panel title={S.extras.byChapter}>
+          <form
+            className="grid grid-cols-2 gap-x-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void countByChapter();
+            }}
+          >
+            <TextField label={F.chapter} value={chapter} onChange={setChapter} options={options.chapters} />
+            <TextField label={F.legion} value={legion} onChange={setLegion} options={options.legions} hint={S.extras.legionHint} />
+            <div className="col-span-2 flex items-center gap-4">
+              <button type="submit" className="btn btn-sm btn-primary">
+                {S.extras.count}
+              </button>
+              {chapterCount !== null && (
+                <div className="stat px-0 py-0">
+                  <div className="stat-title text-xs">{S.extras.marinesCount}</div>
+                  <div className="stat-value text-2xl">{chapterCount}</div>
                 </div>
-              </div>
+              )}
             </div>
-          )}
-          <div className="card-actions">
-            <button type="button" className="btn btn-sm btn-primary" onClick={() => void loadMin()} disabled={busy !== null}>
-              {spinner('min')}Запросить
-            </button>
-          </div>
-          <Hint>На пустой коллекции сервис отвечает 404 — так предусмотрено спецификацией.</Hint>
+          </form>
+          {chapterError && <ErrorAlert error={chapterError} onClose={() => setChapterError(null)} />}
         </Panel>
 
-        <Panel title="Группировка по id">
-          <Hint>Сгруппировать объекты по значению поля id и вернуть количество элементов в каждой группе.</Hint>
-          {groups &&
-            (groups.length === 0 ? (
-              <EmptyState text="Коллекция пуста — групп нет" />
-            ) : (
-              <div className="max-h-72 overflow-auto rounded-box border border-base-300">
-                <table className="table table-sm table-pin-rows">
-                  <thead>
-                    <tr>
-                      <th>Значение id</th>
-                      <th>Элементов</th>
+        <Panel title={S.extras.healthAbove}>
+          <form
+            className="grid grid-cols-2 gap-x-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void countByHealth();
+            }}
+          >
+            <TextField label={S.extras.threshold} value={threshold} onChange={setThreshold} />
+            <div className="col-span-2 flex items-center gap-4">
+              <button type="submit" className="btn btn-sm btn-primary">
+                {S.extras.count}
+              </button>
+              {healthCount !== null && (
+                <div className="stat px-0 py-0">
+                  <div className="stat-title text-xs">{S.extras.marinesCount}</div>
+                  <div className="stat-value text-2xl">{healthCount}</div>
+                </div>
+              )}
+            </div>
+          </form>
+          {healthError && <ErrorAlert error={healthError} onClose={() => setHealthError(null)} />}
+        </Panel>
+
+        <Panel title={S.extras.namePrefix} className="xl:col-span-2">
+          <form
+            className="flex flex-wrap items-end gap-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void search();
+            }}
+          >
+            <div className="w-72">
+              <TextField label={S.extras.prefix} value={prefix} onChange={setPrefix} />
+            </div>
+            <button type="submit" className="btn btn-sm btn-primary mb-1">
+              {S.extras.find}
+            </button>
+            {found && <span className="mb-2 text-sm opacity-70">{S.extras.found(found.length)}</span>}
+          </form>
+          {prefixError && <ErrorAlert error={prefixError} onClose={() => setPrefixError(null)} />}
+          {found && found.length === 0 && <EmptyState text={S.common.nothingFound} />}
+          {found && found.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="table table-zebra table-sm">
+                <thead>
+                  <tr>
+                    <th>{F.id}</th>
+                    <th>{F.name}</th>
+                    <th>{F.category}</th>
+                    <th>{F.health}</th>
+                    <th>{F.loyal}</th>
+                    <th>{F.chapter}</th>
+                    <th>{F.legion}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {found.map((m) => (
+                    <tr key={m.id}>
+                      <td>{m.id}</td>
+                      <td>{m.name}</td>
+                      <td>{m.category}</td>
+                      <td>{m.health}</td>
+                      <td>{m.loyal ? S.common.yes : S.common.no}</td>
+                      <td>{m.chapter?.name ?? S.common.empty}</td>
+                      <td>{m.chapter?.parentLegion ?? S.common.empty}</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {groups.map((g) => (
-                      <tr key={g.id}>
-                        <td>{g.id}</td>
-                        <td>{g.count}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ))}
-          <div className="card-actions">
-            <button type="button" className="btn btn-sm btn-primary" onClick={() => void loadGroups()} disabled={busy !== null}>
-              {spinner('groups')}Сгруппировать
-            </button>
-          </div>
-          <Hint>Идентификатор уникален, поэтому в каждой группе ожидаемо ровно один элемент.</Hint>
-        </Panel>
-
-        <Panel title="Число десантников ордена">
-          <Hint>Вернуть количество объектов, значение поля chapter которых равно заданному.</Hint>
-          <TextField label="Орден (обязательно)" value={chapterName} onChange={setChapterName} />
-          <TextField label="Легион" value={parentLegion} onChange={setParentLegion} hint="пусто — любой легион" />
-          {count && (
-            <div className="stats bg-base-200">
-              <div className="stat">
-                <div className="stat-title">Десантников</div>
-                <div className="stat-value text-primary">{count.value}</div>
-                <div className="stat-desc whitespace-normal">{count.text}</div>
-              </div>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
-          <div className="card-actions">
-            <button type="button" className="btn btn-sm btn-primary" onClick={() => void loadCount()} disabled={busy !== null}>
-              {spinner('count')}Посчитать
-            </button>
-          </div>
         </Panel>
       </div>
     </>

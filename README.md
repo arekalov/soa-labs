@@ -49,6 +49,35 @@ scripts/remote/        настройка и управление сервера
 docs/                  спецификация OpenAPI и Swagger UI
 ```
 
+### API
+
+SpaceMarine Service (`/space-marines`):
+
+| Метод и путь | Назначение |
+|---|---|
+| `GET /space-marines` | список: фильтры по любому полю, `sort` (повторяемый, `-` — по убыванию), `page`, `size` |
+| `POST /space-marines` | создать |
+| `GET /space-marines/{id}` | получить |
+| `PUT /space-marines/{id}` | заменить целиком |
+| `PATCH /space-marines/{id}` | изменить часть полей |
+| `DELETE /space-marines/{id}` | удалить |
+| `GET /space-marines/count/by-chapter?name=&parentLegion=` | число десантников заданного ордена |
+| `GET /space-marines/count/by-health-greater-than?health=` | число десантников со здоровьем больше заданного |
+| `GET /space-marines/search/by-name-prefix?prefix=` | десантники, имя которых начинается с подстроки |
+
+Starship Service (`/starship`):
+
+| Метод и путь | Назначение |
+|---|---|
+| `GET /starship` | список: `sort` (`id`, `-id`, `name`, `-name`), `page`, `size` |
+| `POST /starship` | создать; идентификатор назначает сервер |
+| `GET /starship/{id}` | получить с составом экипажа |
+| `PATCH /starship/{id}` | переименовать |
+| `DELETE /starship/{id}` | удалить |
+| `POST /starship/create/{id}/{name}` | создать с заданным идентификатором (ЛР1) |
+| `POST /starship/{starship-id}/board/{space-marine-id}` | посадить десантника; существование проверяется в первом сервисе |
+| `POST /starship/{starship-id}/unload/{space-marine-id}` | высадить десантника (ЛР1) |
+
 ### Развёртывание
 
 Первичная настройка сервера выполняется один раз:
@@ -60,6 +89,8 @@ ssh ifmo '~/soa/bin/setup-wildfly.sh'    # экземпляр WildFly: HTTPS, с
 ssh ifmo '~/soa/bin/setup-tomcat.sh'     # экземпляр Tomcat: только HTTPS-коннектор
 psql -h localhost -U <логин> -d studs -f db/schema.sql
 ```
+
+Если схема создавалась до появления `POST /starship`, один раз примените `db/migrate-001-starship-identity.sql`.
 
 Дальше обычный цикл:
 
