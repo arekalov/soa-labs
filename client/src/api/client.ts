@@ -1,3 +1,4 @@
+import type { Endpoints } from './endpoints';
 import type {
   CountResultDto,
   ErrorDto,
@@ -18,28 +19,17 @@ import type {
  */
 export type ApiResult<T> = { ok: true; value: T } | { ok: false; error: ErrorDto };
 
-export interface Endpoints {
-  spaceMarine: string;
-  starship: string;
-}
-
-/** По умолчанию — адреса SSH-туннеля: высокие порты helios снаружи закрыты. */
-export const DEFAULT_ENDPOINTS: Endpoints = {
-  spaceMarine: 'https://localhost:24443',
-  starship: 'https://localhost:24543/starship',
-};
-
 const JSON_HEADERS = { 'Content-Type': 'application/json', Accept: 'application/json' };
 
 export class SoaClient {
-  constructor(private readonly endpoints: () => Endpoints) {}
+  constructor(private readonly endpoints: Endpoints) {}
 
   private get marines(): string {
-    return this.endpoints().spaceMarine.replace(/\/+$/, '');
+    return this.endpoints.spaceMarine.replace(/\/+$/, '');
   }
 
   private get ships(): string {
-    return this.endpoints().starship.replace(/\/+$/, '');
+    return this.endpoints.starship.replace(/\/+$/, '');
   }
 
   // ------------------------------------------------------------ SpaceMarine
@@ -121,6 +111,27 @@ export class SoaClient {
       `${this.ships}/${encodeURIComponent(starshipId)}/unload/${encodeURIComponent(spaceMarineId)}`,
       { method: 'POST' },
     );
+  }
+
+  // ----------------------------------------------------------- доступность
+
+  /** Любой HTTP-ответ, даже 4xx, означает, что сервис на связи; исключение — что нет. */
+  async pingSpaceMarine(): Promise<boolean> {
+    try {
+      await fetch(`${this.marines}/space-marines?size=1`);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async pingStarship(): Promise<boolean> {
+    try {
+      await fetch(`${this.ships}/create/0/x`, { method: 'POST' });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   // ----------------------------------------------------------- инфраструктура

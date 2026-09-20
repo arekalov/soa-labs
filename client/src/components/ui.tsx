@@ -1,129 +1,96 @@
 import type { ReactNode } from 'react';
 import type { ErrorDto } from '../api/types';
 
-export function Card({ title, children }: { title: string; children: ReactNode }) {
+export function PageHeader({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: ReactNode }) {
   return (
-    <section className="card">
-      <h2>{title}</h2>
-      {children}
+    <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h1 className="text-2xl font-bold">{title}</h1>
+        {subtitle && <p className="text-sm opacity-60">{subtitle}</p>}
+      </div>
+      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+    </div>
+  );
+}
+
+export function Panel({ title, children, className = '' }: { title?: string; children: ReactNode; className?: string }) {
+  return (
+    <section className={`card bg-base-100 shadow-sm ${className}`}>
+      <div className="card-body gap-3">
+        {title && <h2 className="card-title text-base">{title}</h2>}
+        {children}
+      </div>
     </section>
   );
 }
 
-/** Ряд с переносом — для полей формы и кнопок. */
-export function Row({ children }: { children: ReactNode }) {
-  return <div className="row">{children}</div>;
-}
-
-interface FieldProps {
+interface TextFieldProps {
   label: string;
   value: string;
   onChange: (value: string) => void;
-  wide?: boolean;
   placeholder?: string;
-  multiline?: boolean;
+  hint?: string;
 }
 
-export function Field({ label, value, onChange, wide, placeholder, multiline }: FieldProps) {
+export function TextField({ label, value, onChange, placeholder, hint }: TextFieldProps) {
   return (
-    <label className={wide ? 'field field-wide' : 'field'}>
-      <span className="field-label">{label}</span>
-      {multiline ? (
-        <textarea value={value} placeholder={placeholder} rows={3} onChange={(e) => onChange(e.target.value)} />
-      ) : (
-        <input type="text" value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
-      )}
-    </label>
+    <fieldset className="fieldset">
+      <legend className="fieldset-legend">{label}</legend>
+      <input type="text" className="input input-sm w-full" value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
+      {hint && <p className="label">{hint}</p>}
+    </fieldset>
   );
 }
 
-interface SelectFieldProps {
-  label: string;
+export interface Option {
   value: string;
-  options: readonly string[];
-  onChange: (value: string) => void;
+  label: string;
 }
 
-export function SelectField({ label, value, options, onChange }: SelectFieldProps) {
+export function SelectField({ label, value, options, onChange }: { label: string; value: string; options: readonly Option[]; onChange: (v: string) => void }) {
   return (
-    <label className="field">
-      <span className="field-label">{label}</span>
-      <select value={value} onChange={(e) => onChange(e.target.value)}>
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
+    <fieldset className="fieldset">
+      <legend className="fieldset-legend">{label}</legend>
+      <select className="select select-sm w-full" value={value} onChange={(e) => onChange(e.target.value)}>
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
           </option>
         ))}
       </select>
-    </label>
+    </fieldset>
   );
 }
 
-export function CheckField({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+export function ToggleField({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
-    <label className="field field-check">
-      <span className="field-label">{label}</span>
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-    </label>
+    <fieldset className="fieldset">
+      <legend className="fieldset-legend">{label}</legend>
+      <label className="label cursor-pointer gap-2">
+        <input type="checkbox" className="toggle toggle-sm toggle-primary" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+        <span className="text-sm">{checked ? 'да' : 'нет'}</span>
+      </label>
+    </fieldset>
   );
 }
 
-export function Btn({ children, primary, onClick }: { children: ReactNode; primary?: boolean; onClick: () => void }) {
+export function TextArea({ label, value, onChange, rows = 4, hint }: { label: string; value: string; onChange: (v: string) => void; rows?: number; hint?: string }) {
   return (
-    <button type="button" className={primary ? 'btn btn-primary' : 'btn'} onClick={onClick}>
-      {children}
-    </button>
-  );
-}
-
-export function Chip({ children, active, onClick }: { children: ReactNode; active: boolean; onClick: () => void }) {
-  return (
-    <button type="button" className={active ? 'chip chip-on' : 'chip'} onClick={onClick}>
-      {children}
-    </button>
-  );
-}
-
-export function Hint({ children }: { children: ReactNode }) {
-  return <p className="hint">{children}</p>;
-}
-
-/** Абзац текста — один из видов человеко-читаемого представления, названных в задании. */
-export function Paragraph({ children }: { children: ReactNode }) {
-  return <p className="para">{children}</p>;
-}
-
-/** Таблица — второй вид представления из задания. */
-export function DataTable({ headers, rows }: { headers: string[]; rows: string[][] }) {
-  return (
-    <table className="table">
-      <thead>
-        <tr>
-          {headers.map((h) => (
-            <th key={h}>{h}</th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row, i) => (
-          <tr key={i}>
-            {row.map((cell, j) => (
-              <td key={j}>{cell}</td>
-            ))}
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <fieldset className="fieldset">
+      <legend className="fieldset-legend">{label}</legend>
+      <textarea className="textarea textarea-sm w-full font-mono" rows={rows} value={value} onChange={(e) => onChange(e.target.value)} />
+      {hint && <p className="label">{hint}</p>}
+    </fieldset>
   );
 }
 
 const TITLES: Record<number, string> = {
   0: 'Нет связи с сервисом',
-  400: 'Некорректный запрос (400)',
-  404: 'Не найдено (404)',
-  409: 'Конфликт (409)',
-  422: 'Данные нарушают ограничения (422)',
-  503: 'Сервис недоступен (503)',
+  400: 'Некорректный запрос',
+  404: 'Не найдено',
+  409: 'Конфликт',
+  422: 'Данные нарушают ограничения',
+  503: 'Сервис недоступен',
 };
 
 /**
@@ -132,31 +99,65 @@ const TITLES: Record<number, string> = {
  * Показывает код, текст и перечень нарушенных ограничений из `details` — именно этого
  * требует задание: пользователь должен понять, что данные невалидны и какие именно.
  */
-export function ErrorBanner({ error }: { error: ErrorDto }) {
-  const title = TITLES[error.code] ?? `Ошибка ${error.code}`;
+export function ErrorAlert({ error, onClose }: { error: ErrorDto; onClose?: () => void }) {
+  const title = TITLES[error.code] ?? 'Ошибка';
   const details = error.details ?? [];
+  const tone = error.code === 422 || error.code === 400 || error.code === 409 ? 'alert-warning' : 'alert-error';
   return (
-    <div className={`banner banner-${error.code}`} role="alert">
-      <div className="banner-title">{title}</div>
-      <div>{error.message}</div>
-      {details.length > 0 && (
-        <>
-          <div className="banner-sub">Нарушенные ограничения:</div>
-          <ul>
+    <div role="alert" className={`alert ${tone} alert-soft items-start`}>
+      <div className="grow">
+        <div className="font-semibold">
+          {title}
+          {error.code > 0 && <span className="badge badge-sm badge-ghost ml-2">{error.code}</span>}
+        </div>
+        <div className="text-sm">{error.message}</div>
+        {details.length > 0 && (
+          <ul className="mt-2 list-disc pl-5 text-sm">
             {details.map((d) => (
               <li key={d}>{d}</li>
             ))}
           </ul>
-        </>
+        )}
+      </div>
+      {onClose && (
+        <button type="button" className="btn btn-ghost btn-xs" onClick={onClose} aria-label="Закрыть">
+          ✕
+        </button>
       )}
     </div>
   );
 }
 
-export function SuccessBanner({ children }: { children: ReactNode }) {
+export function Toast({ message }: { message: string }) {
   return (
-    <div className="banner banner-ok" role="status">
-      {children}
+    <div className="toast toast-end z-50">
+      <div role="status" className="alert alert-success shadow-lg">
+        <span>{message}</span>
+      </div>
     </div>
   );
+}
+
+export function Modal({ open, title, onClose, children, wide }: { open: boolean; title: string; onClose: () => void; children: ReactNode; wide?: boolean }) {
+  return (
+    <dialog className={`modal ${open ? 'modal-open' : ''}`}>
+      <div className={`modal-box ${wide ? 'max-w-4xl' : ''}`}>
+        <h3 className="mb-3 text-lg font-bold">{title}</h3>
+        {children}
+      </div>
+      <form method="dialog" className="modal-backdrop">
+        <button type="button" onClick={onClose}>
+          закрыть
+        </button>
+      </form>
+    </dialog>
+  );
+}
+
+export function EmptyState({ text }: { text: string }) {
+  return <div className="py-10 text-center text-sm opacity-60">{text}</div>;
+}
+
+export function Hint({ children }: { children: ReactNode }) {
+  return <p className="text-xs opacity-60">{children}</p>;
 }

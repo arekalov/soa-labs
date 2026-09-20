@@ -1,12 +1,10 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { SoaClient } from './api/client';
-import { useEndpoints } from './config';
-import { EndpointsScreen } from './screens/EndpointsScreen';
-import { ExtrasScreen } from './screens/ExtrasScreen';
-import { MarinesScreen } from './screens/MarinesScreen';
-import { StarshipScreen } from './screens/StarshipScreen';
-
-const TABS = ['Коллекция десантников', 'Сводные операции', 'Десантные корабли', 'Адреса сервисов'] as const;
+import { ENDPOINTS } from './api/endpoints';
+import { Layout, type PageKey } from './components/Layout';
+import { ExtrasPage } from './pages/ExtrasPage';
+import { MarinesPage } from './pages/MarinesPage';
+import { StarshipsPage } from './pages/StarshipsPage';
 
 /**
  * Клиентское приложение лабораторной работы №2.
@@ -16,29 +14,14 @@ const TABS = ['Коллекция десантников', 'Сводные оп�
  * а ошибки сервисов разбираются и объясняются, включая перечень нарушенных ограничений.
  */
 export default function App() {
-  const [endpoints, setEndpoints] = useEndpoints();
-  const [tab, setTab] = useState(0);
-
-  // Клиент создаётся один раз и читает актуальные адреса через ref — так смена адресов
-  // не пересоздаёт его и не сбрасывает состояние экранов.
-  const endpointsRef = useRef(endpoints);
-  endpointsRef.current = endpoints;
-  const client = useMemo(() => new SoaClient(() => endpointsRef.current), []);
+  const client = useMemo(() => new SoaClient(ENDPOINTS), []);
+  const [page, setPage] = useState<PageKey>('marines');
 
   return (
-    <div className="app">
-      <h1>СОА. Лабораторная работа №2 — клиентское приложение</h1>
-      <nav className="tabs">
-        {TABS.map((title, index) => (
-          <button key={title} type="button" className={tab === index ? 'tab tab-on' : 'tab'} onClick={() => setTab(index)}>
-            {title}
-          </button>
-        ))}
-      </nav>
-      {tab === 0 && <MarinesScreen client={client} />}
-      {tab === 1 && <ExtrasScreen client={client} />}
-      {tab === 2 && <StarshipScreen client={client} />}
-      {tab === 3 && <EndpointsScreen value={endpoints} onChange={setEndpoints} />}
-    </div>
+    <Layout active={page} onNavigate={setPage} client={client}>
+      {page === 'marines' && <MarinesPage client={client} />}
+      {page === 'extras' && <ExtrasPage client={client} />}
+      {page === 'starships' && <StarshipsPage client={client} />}
+    </Layout>
   );
 }
