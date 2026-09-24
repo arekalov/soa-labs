@@ -140,15 +140,19 @@ ssh ifmo '~/soa/bin/soa-control.sh status'
 Высокие порты helios закрыты извне, поэтому к сервисам обращаются через SSH-туннель:
 
 ```bash
-ssh -N -L 24443:127.0.0.1:24443 -L 24543:127.0.0.1:24543 ifmo
+ssh -N -L 27443:127.0.0.1:27443 -L 27543:127.0.0.1:27543 ifmo
 ```
 
 | Что | Адрес |
 |---|---|
 | Клиентское приложение | `https://se.ifmo.ru/~s409449/soa/lab2/` |
 | Веб-документация | `https://se.ifmo.ru/~s409449/soa/lab2/docs/` |
-| SpaceMarine Service | `https://localhost:24443` (через туннель) |
-| Starship Service | `https://localhost:24543/starship` (через туннель) |
+| SpaceMarine Service | `https://localhost:27443` (через туннель) |
+| Starship Service | `https://localhost:27543/starship` (через туннель) |
+
+Порты на helios ни за кем не закреплены: занятый соседом порт WildFly не занимает,
+а молча остаётся без HTTPS-слушателя. Если сервис не отвечает — сначала
+`grep "уже используется" ~/soa/wildfly-spacemarine/standalone/log/server.log`.
 
 Сертификаты сервисов самоподписанные. Их публичные части лежат в `certs/`; надёжнее всего один раз добавить их в доверенные на ноутбуке — тогда браузер не будет ни спрашивать, ни терять исключения при очистке данных:
 

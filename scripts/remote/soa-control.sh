@@ -18,12 +18,12 @@ LOGS="$SOA/logs"
 JDK="${JDK:-/usr/local/openjdk21}"
 
 WILDFLY="$SOA/wildfly-spacemarine"
-PORT_OFFSET="${PORT_OFFSET:-16000}"
+PORT_OFFSET="${PORT_OFFSET:-19000}"
 WILDFLY_HTTPS=$((8443 + PORT_OFFSET))
 
 TOMCAT_HOME="$SOA/tomcat-home"
 TOMCAT_BASE="$SOA/base-starship"
-TOMCAT_HTTPS="${TOMCAT_HTTPS:-24543}"
+TOMCAT_HTTPS="${TOMCAT_HTTPS:-27543}"
 
 mkdir -p "$RUN" "$LOGS"
 
@@ -56,10 +56,6 @@ JVM_OPTS="$JVM_OPTS -Djava.net.preferIPv4Stack=true -Dfile.encoding=UTF-8"
 alive() {  # alive <имя>
     local pidfile="$RUN/$1.pid"
     [ -f "$pidfile" ] && pgrep -F "$pidfile" >/dev/null 2>&1
-}
-
-port_open() {  # port_open <порт>
-    nc -z -w 2 127.0.0.1 "$1" >/dev/null 2>&1
 }
 
 # Готовность именно приложения, а не сокета: WildFly открывает порт задолго до того,
@@ -170,14 +166,14 @@ start_tomcat() {
 # ----------------------------------------------------------------------- вывод
 
 show_status() {
-    printf "%-18s %-12s %s\n" "СЕРВИС" "ПРОЦЕСС" "ПОРТ"
-    for entry in "wildfly:$WILDFLY_HTTPS" "tomcat-starship:$TOMCAT_HTTPS"; do
-        local name="${entry%%:*}"
-        local port="${entry##*:}"
-        local proc port_state
+    printf "%-18s %-12s %s\n" "СЕРВИС" "ПРОЦЕСС" "HTTPS"
+    for entry in "wildfly:$WILDFLY_HTTPS:spacemarine:/space-marines" \
+                 "tomcat-starship:$TOMCAT_HTTPS:starship:/starship"; do
+        local name port cert path proc state
+        IFS=: read -r name port cert path <<< "$entry"
         alive "$name" && proc="работает" || proc="остановлен"
-        port_open "$port" && port_state="$port открыт" || port_state="$port закрыт"
-        printf "%-18s %-12s %s\n" "$name" "$proc" "$port_state"
+        app_ready "$port" "$SECRETS/$cert.crt" "$path" && state="$port отвечает" || state="$port не отвечает"
+        printf "%-18s %-12s %s\n" "$name" "$proc" "$state"
     done
 }
 

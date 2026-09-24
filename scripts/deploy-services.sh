@@ -49,9 +49,9 @@ ssh "$SSH_HOST" '
   ok=0
   for i in $(seq 1 40); do
     sm=$(curl -s -o /dev/null --cacert ~/soa/secrets/spacemarine.crt --max-time 6 \
-         -w "%{http_code}" https://127.0.0.1:24443/space-marines 2>/dev/null)
+         -w "%{http_code}" https://127.0.0.1:27443/space-marines 2>/dev/null)
     ss=$(curl -s -o /dev/null --cacert ~/soa/secrets/starship.crt --max-time 6 \
-         -X POST -w "%{http_code}" https://127.0.0.1:24543/starship/create/0/x 2>/dev/null)
+         -X POST -w "%{http_code}" https://127.0.0.1:27543/starship/create/0/x 2>/dev/null)
     if [ "$sm" = "200" ] && [ "$ss" = "400" ]; then ok=1; break; fi
     sleep 5
   done

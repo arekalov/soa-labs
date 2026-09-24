@@ -20,8 +20,6 @@ class SpaceMarineClient(
         client.get()
             .uri("/space-marines/{id}", spaceMarineId)
             .accept(MediaType.APPLICATION_JSON)
-            // exchange, а не retrieve: на 404 первый сервис отдаёт тело схемы Error,
-            // и retrieve попытался бы разобрать его как полезную нагрузку.
             .exchange { _, response ->
                 when (val status = response.statusCode.value()) {
                     HTTP_OK -> true

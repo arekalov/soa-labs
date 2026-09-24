@@ -19,6 +19,10 @@ CACERTS="$JDK/lib/security/cacerts"
 # обязательны: высокие порты helios закрыты снаружи, и на защите доступ идёт
 # через SSH-туннель — без них проверка имени хоста завалится.
 SAN='SAN=dns:helios.cs.ifmo.ru,dns:se.ifmo.ru,dns:localhost,ip:127.0.0.1'
+# Адрес, по которому Starship зовёт SpaceMarine. Должен совпадать с портом WildFly
+# из setup-wildfly.sh: сертификат привязан к имени хоста, а не к порту, поэтому
+# рассинхрон проявится не ошибкой TLS, а 503 на посадке десантника.
+SPACEMARINE_BASE_URL="${SPACEMARINE_BASE_URL:-https://helios.cs.ifmo.ru:27443}"
 DNAME_SUFFIX='OU=SOA Lab2, O=ITMO, L=Saint-Petersburg, C=RU'
 VALIDITY_DAYS=825
 
@@ -56,9 +60,24 @@ SOA_TRUSTSTORE_PATH='$SECRETS/soa-truststore.p12'
 SOA_DB_URL='jdbc:postgresql://pg:5432/studs'
 SOA_DB_USER='$USER'
 SOA_DB_PASSWORD='$DB_PASS'
-SOA_SPACEMARINE_BASE_URL='https://helios.cs.ifmo.ru:24443'
+SOA_SPACEMARINE_BASE_URL='$SPACEMARINE_BASE_URL'
 EOF
   chmod 600 "$SECRETS/soa.env"
+  # shellcheck disable=SC1091
+  . "$SECRETS/soa.env"
+fi
+
+# Пароли переживают повторный запуск, а вот адрес соседа — настройка, а не секрет,
+# и меняться может. Синхронизируем его отдельно, иначе смена порта в скриптах
+# не доедет до уже настроенного сервера и останется расхождение.
+if [ "${SOA_SPACEMARINE_BASE_URL:-}" != "$SPACEMARINE_BASE_URL" ]; then
+  echo "== обновляю SOA_SPACEMARINE_BASE_URL -> $SPACEMARINE_BASE_URL =="
+  if grep -q '^SOA_SPACEMARINE_BASE_URL=' "$SECRETS/soa.env"; then
+    perl -pi -e "s{^SOA_SPACEMARINE_BASE_URL=.*}{SOA_SPACEMARINE_BASE_URL='$SPACEMARINE_BASE_URL'}" \
+      "$SECRETS/soa.env"
+  else
+    echo "SOA_SPACEMARINE_BASE_URL='$SPACEMARINE_BASE_URL'" >> "$SECRETS/soa.env"
+  fi
   # shellcheck disable=SC1091
   . "$SECRETS/soa.env"
 fi

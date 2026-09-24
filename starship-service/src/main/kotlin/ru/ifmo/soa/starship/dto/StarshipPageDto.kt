@@ -1,6 +1,5 @@
 package ru.ifmo.soa.starship.dto
 
-/** Схема `StarshipPage`. */
 data class StarshipPageDto(
     val items: List<StarshipDto>,
     val page: Int,

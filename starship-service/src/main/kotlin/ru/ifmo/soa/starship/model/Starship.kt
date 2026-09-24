@@ -19,8 +19,6 @@ class Starship(
     @Column(name = "name", nullable = false)
     var name: String = "",
 
-    // Идентификаторы десантников из первого сервиса. Внешнего ключа на их таблицу нет
-    // и быть не может: целостность поддерживается вызовом REST, а не СУБД.
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "starship_marine", joinColumns = [JoinColumn(name = "starship_id")])
     @Column(name = "space_marine_id", nullable = false)

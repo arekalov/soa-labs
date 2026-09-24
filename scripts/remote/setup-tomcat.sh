@@ -13,8 +13,8 @@ TOMCAT_BASE="$SOA/base-starship"
 ARCHIVE="${ARCHIVE:-/tmp/apache-tomcat-11.0.26.tar.gz}"
 JDK="${JDK:-/usr/local/openjdk21}"
 
-HTTPS_PORT="${HTTPS_PORT:-24543}"
-SHUTDOWN_PORT="${SHUTDOWN_PORT:-24544}"
+HTTPS_PORT="${HTTPS_PORT:-27543}"
+SHUTDOWN_PORT="${SHUTDOWN_PORT:-27544}"
 
 [ -f "$SECRETS/soa.env" ] || { echo "Сначала выполните setup-secrets.sh" >&2; exit 1; }
 # shellcheck disable=SC1091
@@ -130,25 +130,13 @@ XML
 # --- глобальный web.xml: страховка CONFIDENTIAL -----------------------------
 # Срабатывать ей не на чем — HTTP-коннектора нет, — но это декларация намерения,
 # которую проверяющий ищет глазами, и третий рубеж после отсутствия коннектора.
-python3 - "$TOMCAT_BASE/conf/web.xml" <<'PY' 2>/dev/null || perl -0pi -e 's{</web-app>}{  <security-constraint>\n    <web-resource-collection>\n      <web-resource-name>Entire application</web-resource-name>\n      <url-pattern>/*</url-pattern>\n    </web-resource-collection>\n    <user-data-constraint>\n      <transport-guarantee>CONFIDENTIAL</transport-guarantee>\n    </user-data-constraint>\n  </security-constraint>\n\n</web-app>}' "$TOMCAT_BASE/conf/web.xml"
-import sys
-path = sys.argv[1]
-text = open(path, encoding='utf-8').read()
-if 'CONFIDENTIAL' not in text:
-    block = """  <security-constraint>
-    <web-resource-collection>
-      <web-resource-name>Entire application</web-resource-name>
-      <url-pattern>/*</url-pattern>
-    </web-resource-collection>
-    <user-data-constraint>
-      <transport-guarantee>CONFIDENTIAL</transport-guarantee>
-    </user-data-constraint>
-  </security-constraint>
-
-</web-app>"""
-    text = text.replace('</web-app>', block)
-    open(path, 'w', encoding='utf-8').write(text)
-PY
+# Проверка обязательна: python3 на helios нет, поэтому всегда отрабатывала
+# perl-ветка, а она дописывала блок без разбора — каждый запуск скрипта добавлял
+# в web.xml ещё одну копию.
+if ! grep -q CONFIDENTIAL "$TOMCAT_BASE/conf/web.xml"; then
+  perl -0pi -e 's{</web-app>}{  <security-constraint>\n    <web-resource-collection>\n      <web-resource-name>Entire application</web-resource-name>\n      <url-pattern>/*</url-pattern>\n    </web-resource-collection>\n    <user-data-constraint>\n      <transport-guarantee>CONFIDENTIAL</transport-guarantee>\n    </user-data-constraint>\n  </security-constraint>\n\n</web-app>}' \
+    "$TOMCAT_BASE/conf/web.xml"
+fi
 
 # --- setenv.sh --------------------------------------------------------------
 cat > "$TOMCAT_HOME/bin/setenv.sh" <<ENV
@@ -167,5 +155,5 @@ echo "== готово =="
 echo "CATALINA_HOME: $TOMCAT_HOME"
 echo "CATALINA_BASE: $TOMCAT_BASE"
 echo "HTTPS: $HTTPS_PORT, shutdown: $SHUTDOWN_PORT (только 127.0.0.1)"
-grep -c "Connector" "$TOMCAT_BASE/conf/server.xml" | xargs echo "коннекторов в server.xml (ожидается 1):"
-grep -c "CONFIDENTIAL" "$TOMCAT_BASE/conf/web.xml" | xargs echo "ограничений CONFIDENTIAL:"
+grep -c "<Connector" "$TOMCAT_BASE/conf/server.xml" | xargs echo "коннекторов в server.xml (ожидается 1):"
+grep -c "CONFIDENTIAL" "$TOMCAT_BASE/conf/web.xml" | xargs echo "ограничений CONFIDENTIAL (ожидается 1):"

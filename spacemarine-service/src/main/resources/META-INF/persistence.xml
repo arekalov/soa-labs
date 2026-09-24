@@ -9,15 +9,12 @@
         <jta-data-source>java:jboss/datasources/SpaceMarineDS</jta-data-source>
 
         <properties>
-            <!-- Схему раскатывает db/schema.sql; Hibernate только сверяет соответствие.
-                 Ни create, ни update: DDL должен быть воспроизводимым и лежать в репозитории. -->
             <property name="hibernate.hbm2ddl.auto" value="validate"/>
 
             <!-- Даты храним и сравниваем в UTC. Без этого Instant поехал бы на смещение
                  серверной таймзоны, и фильтр по точному равенству creationDate перестал бы совпадать. -->
             <property name="hibernate.jdbc.time_zone" value="UTC"/>
 
-            <!-- Диалект определяется автоматически по метаданным соединения. -->
         </properties>
     </persistence-unit>
 </persistence>

@@ -19,11 +19,7 @@ private val CONNECT_TIMEOUT: Duration = Duration.ofSeconds(3)
 private val READ_TIMEOUT: Duration = Duration.ofSeconds(5)
 
 /**
- * Защищённый канал к первому сервису.
- *
- * Проверка имени хоста намеренно не отключается: это распространённый шорткат, который
- * превращает TLS в бутафорию. Вместо этого сертификат первого сервиса лежит в нашем
- * truststore, а в его SAN входят все имена, под которыми к сервису обращаются.
+ * Защищённый канал к первому сервису.ются.
  */
 @Configuration
 class RestClientConfig {

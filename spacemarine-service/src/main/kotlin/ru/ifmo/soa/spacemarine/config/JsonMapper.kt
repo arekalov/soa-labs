@@ -15,9 +15,7 @@ val jsonMapper: ObjectMapper = JsonMapper.builder()
     .addModule(KotlinModule.Builder().build())
     .addModule(JavaTimeModule())
     .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-    // id и creationDate помечены readOnly, поэтому клиент вправе вернуть их в теле после GET.
     .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-    // Иначе Jackson молча превратил бы {"name": 42} в имя "42" вместо ответа 400.
     .withCoercionConfig(LogicalType.Textual) { config ->
         config.setCoercion(CoercionInputShape.Integer, CoercionAction.Fail)
         config.setCoercion(CoercionInputShape.Float, CoercionAction.Fail)

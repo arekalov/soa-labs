@@ -1,8 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <jboss-web>
-    <!--
-      Контекст-рут «/» обязателен: в спецификации нет блока servers, а префикс /space-marines
-      зашит прямо в paths. При любом другом контексте итоговые URL разошлись бы со спекой.
-    -->
     <context-root>/</context-root>
 </jboss-web>

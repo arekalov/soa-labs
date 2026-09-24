@@ -30,13 +30,6 @@ import ru.ifmo.soa.spacemarine.query.DEFAULT_SIZE
 import ru.ifmo.soa.spacemarine.service.SpaceMarineService
 import java.net.URI
 
-/**
- * Все девять операций спецификации.
- *
- * Разносить их по нескольким классам с одинаковым `@Path` нельзя: это серая зона JAX-RS.
- * Коллизии между `/{id}` и путями вроде `/count/by-chapter` нет: шаблон `{id}`
- * компилируется в `[^/]+?` и совпадает ровно с одним сегментом.
- */
 @Path("/space-marines")
 @Produces(MediaType.APPLICATION_JSON)
 @ApplicationScoped

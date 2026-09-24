@@ -12,10 +12,6 @@ private const val BAD_REQUEST = 400
 
 /**
  * Тело не разобралось как JSON либо тип значения не совпал с типом поля.
- *
- * Отдельный маппер, а не ветка в [GlobalExceptionMapper]: сбой чтения тела RESTEasy
- * оборачивает в свой `ReaderException` и ищет обработчик по точному типу причины.
- * Обработчик на `Throwable` в этот поиск не попадает, и наружу ушёл бы текст сервера.
  */
 @Provider
 class MalformedJsonMapper : ExceptionMapper<JsonProcessingException> {

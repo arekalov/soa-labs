@@ -10,7 +10,7 @@
       "modified": 0,
       "created": 0,
       "name": "СОА ЛР2 — вариант 73126",
-      "description": "Коллекция запросов к обоим сервисам лабораторной работы №2.\n\nПеред работой:\n1. Поднимите туннель к helios:\n   ssh -N -L 24443:127.0.0.1:24443 -L 24543:127.0.0.1:24543 ifmo\n2. Сертификаты сервисов самоподписанные, поэтому в настройках Insomnia\n   выключите проверку сертификатов: Preferences → Request → Validate certificates.\n\nАдреса и подставляемые идентификаторы лежат в окружении Base Environment.",
+      "description": "Коллекция запросов к обоим сервисам лабораторной работы №2.\n\nПеред работой:\n1. Поднимите туннель к helios:\n   ssh -N -L 27443:127.0.0.1:27443 -L 27543:127.0.0.1:27543 ifmo\n2. Сертификаты сервисов самоподписанные, поэтому в настройках Insomnia\n   выключите проверку сертификатов: Preferences → Request → Validate certificates.\n\nАдреса и подставляемые идентификаторы лежат в окружении Base Environment.",
       "scope": "collection",
       "_type": "workspace"
     },
@@ -21,8 +21,8 @@
       "created": 0,
       "name": "Base Environment",
       "data": {
-        "space_marine": "https://localhost:24443",
-        "starship": "https://localhost:24543/starship",
+        "space_marine": "https://localhost:27443",
+        "starship": "https://localhost:27543/starship",
         "marine_id": "1",
         "starship_id": "1"
       },
