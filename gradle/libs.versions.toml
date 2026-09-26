@@ -11,6 +11,9 @@ assertj = "3.27.0"
 mockitoKotlin = "5.4.0"
 hibernateValidator = "8.0.2.Final"
 expressly = "5.0.0"
+smallryeOpenApi = "4.3.5"
+springdocPlugin = "1.9.0"
+springdoc = "3.1.1"
 
 [libraries]
 jakartaee-api = { module = "jakarta.platform:jakarta.jakartaee-api", version.ref = "jakartaee" }
@@ -32,6 +35,8 @@ hibernate-validator = { module = "org.hibernate.validator:hibernate-validator", 
 assertj = { module = "org.assertj:assertj-core", version.ref = "assertj" }
 mockito-kotlin = { module = "org.mockito.kotlin:mockito-kotlin", version.ref = "mockitoKotlin" }
 expressly = { module = "org.glassfish.expressly:expressly", version.ref = "expressly" }
+springdoc-webmvc-api = { module = "org.springdoc:springdoc-openapi-starter-webmvc-api", version.ref = "springdoc" }
+h2 = { module = "com.h2database:h2" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
@@ -40,3 +45,5 @@ kotlin-spring = { id = "org.jetbrains.kotlin.plugin.spring", version.ref = "kotl
 kotlin-allopen = { id = "org.jetbrains.kotlin.plugin.allopen", version.ref = "kotlin" }
 spring-boot = { id = "org.springframework.boot", version.ref = "springBoot" }
 spring-depmgmt = { id = "io.spring.dependency-management", version.ref = "springDepMgmt" }
+smallrye-openapi = { id = "io.smallrye.openapi", version.ref = "smallryeOpenApi" }
+springdoc = { id = "org.springdoc.openapi-gradle-plugin", version.ref = "springdocPlugin" }

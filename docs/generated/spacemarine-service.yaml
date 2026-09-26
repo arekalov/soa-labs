@@ -1,0 +1,301 @@
+---
+components:
+  schemas:
+    AstartesCategory:
+      enum:
+      - SCOUT
+      - SUPPRESSOR
+      - TACTICAL
+      - HELIX
+      type: string
+    ChapterDto:
+      type: object
+      properties:
+        name:
+          type: string
+          nullable: true
+        parentLegion:
+          type: string
+          nullable: true
+    CoordinatesDto:
+      type: object
+      properties:
+        x:
+          format: int32
+          type: integer
+          nullable: true
+        "y":
+          format: double
+          type: number
+          nullable: true
+    CountResultDto:
+      required:
+      - count
+      type: object
+      properties:
+        count:
+          format: int64
+          type: integer
+    PatchBody:
+      type: object
+    SpaceMarineDto:
+      required:
+      - id
+      - name
+      - coordinates
+      - creationDate
+      - health
+      - loyal
+      - achievements
+      - category
+      - chapter
+      type: object
+      properties:
+        id:
+          format: int32
+          type: integer
+        name:
+          type: string
+        coordinates:
+          $ref: "#/components/schemas/CoordinatesDto"
+        creationDate:
+          format: date-time
+          type: string
+          example: 2022-03-10T16:15:50Z
+        health:
+          format: float
+          type: number
+        loyal:
+          type: boolean
+        achievements:
+          type: string
+          nullable: true
+        category:
+          $ref: "#/components/schemas/AstartesCategory"
+        chapter:
+          allOf:
+          - $ref: "#/components/schemas/ChapterDto"
+          nullable: true
+    SpaceMarineInputDto:
+      type: object
+      properties:
+        name:
+          type: string
+          nullable: true
+        coordinates:
+          allOf:
+          - $ref: "#/components/schemas/CoordinatesDto"
+          nullable: true
+        health:
+          format: float
+          type: number
+          nullable: true
+        loyal:
+          type: boolean
+          nullable: true
+        achievements:
+          type: string
+          nullable: true
+        category:
+          allOf:
+          - $ref: "#/components/schemas/AstartesCategory"
+          nullable: true
+        chapter:
+          allOf:
+          - $ref: "#/components/schemas/ChapterDto"
+          nullable: true
+    SpaceMarinePageDto:
+      required:
+      - items
+      - page
+      - size
+      - totalElements
+      - totalPages
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SpaceMarineDto"
+        page:
+          format: int32
+          type: integer
+        size:
+          format: int32
+          type: integer
+        totalElements:
+          format: int64
+          type: integer
+        totalPages:
+          format: int32
+          type: integer
+openapi: 3.0.3
+paths:
+  /space-marines:
+    get:
+      operationId: list
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpaceMarinePageDto"
+    post:
+      operationId: create
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpaceMarineInputDto"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {}
+  /space-marines/count/by-chapter:
+    get:
+      operationId: countByChapter
+      parameters:
+      - name: name
+        in: query
+        schema:
+          type: string
+          nullable: true
+        required: true
+      - name: parentLegion
+        in: query
+        schema:
+          type: string
+          nullable: true
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CountResultDto"
+  /space-marines/count/by-health-greater-than:
+    get:
+      operationId: countByHealthGreaterThan
+      parameters:
+      - name: health
+        in: query
+        schema:
+          type: string
+          nullable: true
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CountResultDto"
+  /space-marines/search/by-name-prefix:
+    get:
+      operationId: findByNamePrefix
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: string
+          nullable: true
+        required: true
+      - name: prefix
+        in: query
+        schema:
+          type: string
+          nullable: true
+        required: true
+      - name: size
+        in: query
+        schema:
+          type: string
+          nullable: true
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpaceMarinePageDto"
+  /space-marines/{id}:
+    put:
+      operationId: replace
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpaceMarineInputDto"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpaceMarineDto"
+    patch:
+      operationId: patch
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchBody"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpaceMarineDto"
+    get:
+      operationId: getById
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpaceMarineDto"
+    delete:
+      operationId: delete
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {}
+info:
+  title: SpaceMarine Service
+  version: 1.0.0

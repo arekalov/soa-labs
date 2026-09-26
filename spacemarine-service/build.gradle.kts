@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.kotlin.jpa)
     // allOpen: Hibernate строит прокси наследованием, а классы Kotlin по умолчанию final
     alias(libs.plugins.kotlin.allopen)
+    alias(libs.plugins.smallrye.openapi)
 }
 
 allOpen {
@@ -40,4 +41,16 @@ dependencies {
 
 tasks.war {
     archiveFileName.set("spacemarine-service.war")
+}
+
+// Спецификация из кода — для сравнения с рукописной в docs/. Тот же SmallRye,
+// что встроен в WildFly, поэтому результат совпадает с тем, что отдал бы /openapi сервера.
+smallryeOpenApi {
+    configProperties.set(file("openapi.properties"))
+    infoTitle.set("SpaceMarine Service")
+    infoVersion.set("1.0.0")
+    openApiVersion.set("3.0.3")
+    schemaFilename.set("spacemarine-service")
+    outputFileTypeFilter.set("YAML")
+    operationIdStrategy.set("METHOD")
 }
