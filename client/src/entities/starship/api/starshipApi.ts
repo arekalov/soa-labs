@@ -2,7 +2,6 @@ import { get, patch, ping, post, queryString, remove, STARSHIP_API } from '@/sha
 import type { ApiResult } from '@/shared/api';
 import type { StarshipDto, StarshipPageDto, UnloadResultDto } from '../model/types';
 
-// Завершающий слэш обязателен: иначе Tomcat отвечает на корень контекста перенаправлением 302.
 const BASE = `${STARSHIP_API}/`;
 
 export function listStarships(

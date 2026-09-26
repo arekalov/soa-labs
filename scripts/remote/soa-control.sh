@@ -155,7 +155,7 @@ start_node() {  # start_node <узел>
     [ -d "$base" ] || { echo "  $name не настроен, пропускаю"; return 0; }
     offset="$(node_offset "$name")"
 
-    # Starship читает адрес БД и truststore из окружения — как раньше делал setenv.sh Tomcat.
+    # Starship читает адрес БД и truststore из окружения.
     # shellcheck disable=SC1091
     . "$SECRETS/soa.env"
     export SOA_KEYSTORE_PASSWORD SOA_TRUSTSTORE_PATH SOA_TRUSTSTORE_PASSWORD

@@ -35,8 +35,8 @@ echo "==> Останавливаю серверы"
 ssh "$SSH_HOST" '~/soa/bin/soa-control.sh stop' || true
 
 echo "==> Копирую артефакты"
-# Копируем во временное имя и переименовываем на месте: и сканер WildFly,
-# и autoDeploy Tomcat умеют подхватить недокопированный архив и упасть на Invalid zip.
+# Копируем во временное имя и переименовываем на месте: сканер WildFly
+# может подхватить недокопированный архив и упасть на Invalid zip.
 if [ "$WHAT" != starship ]; then
   scp -q "$SM_EAR" "$SSH_HOST:~/$SM_DEPLOY/.spacemarine.ear.tmp"
   ssh "$SSH_HOST" "

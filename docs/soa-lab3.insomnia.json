@@ -755,7 +755,7 @@
       "created": 0,
       "url": "{{ _.starship }}/",
       "name": "Список",
-      "description": "200. Завершающий слэш обязателен: без него Tomcat отвечает перенаправлением.",
+      "description": "200.",
       "method": "GET",
       "body": {},
       "parameters": [
