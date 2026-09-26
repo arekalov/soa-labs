@@ -24,11 +24,11 @@ case "$WHAT" in
 esac
 
 SM_EAR="spacemarine/ear/build/libs/spacemarine.ear"
-SS_WAR="starship-service/build/libs/ROOT.war"
+SS_EAR="starship/ear/build/libs/starship.ear"
 
 echo "==> Собираю: $WHAT"
 [ "$WHAT" = starship ] || ./gradlew :spacemarine:ear:ear
-[ "$WHAT" = spacemarine ] || ./gradlew :starship-service:bootWar
+[ "$WHAT" = spacemarine ] || ./gradlew :starship:ear:ear
 
 echo "==> Останавливаю серверы"
 ssh "$SSH_HOST" '~/soa/bin/soa-control.sh stop' || true
@@ -47,9 +47,9 @@ fi
 
 if [ "$WHAT" != spacemarine ]; then
   # Старую войну сносим до копирования новой: вдвоём они не помещаются в квоту.
-  ssh "$SSH_HOST" "cd ~/$SS_DEPLOY && rm -rf ROOT.war ROOT.war.* starship.war starship.war.*"
-  scp -q "$SS_WAR" "$SSH_HOST:~/$SS_DEPLOY/.ROOT.war.tmp"
-  ssh "$SSH_HOST" "cd ~/$SS_DEPLOY && mv .ROOT.war.tmp ROOT.war"
+  ssh "$SSH_HOST" "cd ~/$SS_DEPLOY && rm -rf ROOT.war ROOT.war.* starship.war starship.war.* starship.ear starship.ear.*"
+  scp -q "$SS_EAR" "$SSH_HOST:~/$SS_DEPLOY/.starship.ear.tmp"
+  ssh "$SSH_HOST" "cd ~/$SS_DEPLOY && mv .starship.ear.tmp starship.ear"
 fi
 
 echo "==> Запускаю серверы"

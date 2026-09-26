@@ -31,7 +31,7 @@
 | Компонент | Технология | Сервер приложений |
 |---|---|---|
 | SpaceMarine Service | Kotlin, JAX-RS, Stateless EJB | WildFly, EAR |
-| Starship Service | Kotlin, Spring MVC REST | WildFly |
+| Starship Service | Kotlin, Spring MVC REST, Stateless EJB | WildFly, EAR |
 | Реестр сервисов | Consul | — |
 | Балансировщик | HAProxy | — |
 | Клиентское приложение | React, TypeScript (Vite) | статика на helios |
@@ -75,7 +75,9 @@ soa-api/               @Remote-интерфейсы, DTO, запросы и ис
 spacemarine/ejb/       @Stateless, репозиторий на JPA Criteria API, сущности
 spacemarine/web/       JAX-RS: контроллер, фильтры, мапперы ошибок
 spacemarine/ear/       сборка EAR из ejb + web, общие библиотеки в lib/
-starship-service/      Spring MVC и Spring Data, разворачивается на WildFly как ROOT.war
+starship/ejb/          @Stateless, репозиторий на JPA Criteria API, клиент первого сервиса
+starship/web/          Spring MVC: контроллер, обработчик ошибок, CORS
+starship/ear/          сборка EAR из ejb + web
 client/                React + TypeScript (Vite), статика
 db/                    DDL, миграции и скрипт очистки схемы
 scripts/               развёртывание с ноутбука
@@ -99,9 +101,10 @@ mapper/      перевод между сущностью и DTO
 Messages.kt  все тексты, уходящие клиенту
 ```
 
-Хранилище первого сервиса написано на JPA Criteria API: контекста Spring в нём нет.
-Второй пока использует Spring Data — выборку по спецификациям, постраничный вывод
-и производные методы запросов.
+Хранилища обоих сервисов написаны на JPA Criteria API: бизнес-компоненты живут вне
+контекста Spring, и Spring Data там неприменима. Контроллер Starship остаётся на
+Spring MVC, но бизнес-интерфейс достаёт из JNDI: аннотацию `@EJB` обрабатывает
+контейнер и только у своих компонентов, а контроллер создаёт Spring.
 
 Клиент разложен по Feature-Sliced Design: `app`, `pages`, `widgets`, `features`,
 `entities`, `shared`. Импорты идут только вниз по этому списку, у каждого слайса

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Исключения объявлены здесь, а не в WAR: у вложенного модуля собственный
+  WEB-INF/jboss-deployment-structure.xml сервер не читает.
+
+  logging — Spring несёт Logback, а WildFly подставляет свою привязку slf4j,
+  и контекст падает с "LoggerFactory is not a Logback LoggerContext".
+  jaxrs и weld подхватили бы аннотации Spring MVC и его бины.
+-->
+<jboss-deployment-structure>
+    <sub-deployment name="starship-web.war">
+        <exclude-subsystems>
+            <subsystem name="logging"/>
+            <subsystem name="jaxrs"/>
+            <subsystem name="weld"/>
+            <subsystem name="webservices"/>
+        </exclude-subsystems>
+    </sub-deployment>
+</jboss-deployment-structure>
