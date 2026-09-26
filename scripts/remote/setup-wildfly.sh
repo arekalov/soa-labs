@@ -245,6 +245,13 @@ end-if
 if (outcome == success) of /subsystem=microprofile-config-smallrye:read-resource
     /subsystem=microprofile-config-smallrye:remove
 end-if
+if (outcome == success) of /subsystem=jmx:read-resource
+    /subsystem=jmx:remove
+end-if
+# Кеш второго уровня Hibernate отключён в persistence.xml, поэтому Infinispan не нужен.
+if (outcome == success) of /subsystem=infinispan/cache-container=hibernate:read-resource
+    /subsystem=infinispan/cache-container=hibernate:remove
+end-if
 
 # --- пул компонентов EJB ---
 # По умолчанию размер выводится из пула воркеров; задание требует настраиваемую мощность,

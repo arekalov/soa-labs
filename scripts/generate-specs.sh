@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 #
-# Спецификации из кода обоих сервисов и их сравнение с рукописными из docs/.
-# Запускается С НОУТБУКА. Результат — docs/generated/.
+# Спецификация SpaceMarine из кода и сравнение с рукописной. Запускается С НОУТБУКА.
 #
-# SpaceMarine: SmallRye сканирует классы при сборке, сервер не нужен.
-# Starship: springdoc отдаёт документ только из работающего приложения, поэтому
-# оно поднимается локально на профиле openapi (встроенный Tomcat, H2 вместо Postgres).
+# SmallRye сканирует классы при сборке, сервер не нужен. Для Starship такого способа
+# нет: springdoc описывает только работающее приложение, а оно теперь ищет свой
+# бизнес-компонент в JNDI и вне контейнера не поднимается.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -13,23 +12,18 @@ cd "$(dirname "$0")/.."
 OUT="docs/generated"
 mkdir -p "$OUT"
 
-echo "==> Генерирую спецификации"
-./gradlew -q :spacemarine:web:generateOpenApiSpec :starship-service:generateOpenApiDocs
+echo "==> Генерирую спецификацию"
+./gradlew -q :spacemarine:web:generateOpenApiSpec
 
-# Плагины пишут в build/: если отдать им docs/generated как выходной каталог,
-# Gradle считает его своим и удаляет оттуда всё постороннее, включая changelog.
+# Плагин пишет в build/: если отдать ему docs/generated, Gradle сочтёт каталог своим
+# и удалит оттуда всё постороннее, включая changelog.
 cp spacemarine/web/build/generated/openapi/spacemarine-service.yaml "$OUT/"
-cp starship-service/build/openapi/starship-service.yaml "$OUT/"
 
 command -v oasdiff >/dev/null || { echo "oasdiff не установлен: brew install oasdiff" >&2; exit 1; }
 
-echo "==> Сравниваю с рукописными"
+echo "==> Сравниваю с рукописной"
 oasdiff changelog docs/spacemarine-service.yaml "$OUT/spacemarine-service.yaml" \
   -f markdown > "$OUT/spacemarine-service.changelog.md" || true
-# Контекст /starship springdoc выносит в servers, а пути пишет без него;
-# в рукописной спецификации префикс входит в пути — выравниваем при сравнении.
-oasdiff changelog docs/starship-service.yaml "$OUT/starship-service.yaml" \
-  --prefix-revision /starship -f markdown > "$OUT/starship-service.changelog.md" || true
 
 echo "==> Готово:"
 ls -1 "$OUT"

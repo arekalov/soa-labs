@@ -11,6 +11,10 @@
         <properties>
             <property name="hibernate.hbm2ddl.auto" value="validate"/>
             <property name="hibernate.jdbc.time_zone" value="UTC"/>
+
+            <!-- Кеш второго уровня поднимает контейнер Infinispan со своими потоками,
+                 а на helios их лимит на пользователя общий для всех трёх узлов. -->
+            <property name="hibernate.cache.use_second_level_cache" value="false"/>
         </properties>
     </persistence-unit>
 </persistence>

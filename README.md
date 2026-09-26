@@ -39,22 +39,30 @@
 ### Схема системы
 
 ```
-        браузер, Insomnia  —— SSH-туннель ——┐
-                                            │
-        ┌───────────────────────────────────┴──────────────┐
-        ▼                                                  ▼
-   HAProxy :27343                              SpaceMarine, WildFly :27443
-        │                                      ┌──────────────────────────┐
-        ▼                                      │ spacemarine-web.war      │
-   Starship :27543                             │   JAX-RS, только вызовы  │
-   Tomcat, Spring MVC                          │        │ @EJB           │
-        │                                      │ spacemarine-ejb.jar     │
-        │  адрес соседа — из реестра           │   @Stateless, пул на 32 │
-        └─────────────────────────────────────▶└───────────┬──────────────┘
-                                                           │
-   Consul :27500 — реестр сервисов                         │
-                                                           ▼
-   PostgreSQL pg:5432/studs ◀────────────────────────── все узлы
+              браузер, Insomnia
+                     │  SSH-туннель
+  ═══════════════════╪═══════════════════════════════════ helios ══════
+                     │
+         ┌───────────┴────────────┐
+         ▼                        ▼
+   HAProxy :27343          SpaceMarine, WildFly :27443
+         │                 ┌────────────────────────────┐
+    ┌────┴─────┐           │ spacemarine-web.war        │
+    ▼          ▼           │   JAX-RS, только делегация │
+ :27543     :27643         │        │ @EJB              │
+ ┌──────┐  ┌──────┐        │ spacemarine-ejb.jar        │
+ │ web  │  │ web  │        │   @Stateless, пул на 32    │
+ │  │   │  │  │   │        └──────────┬─────────────────┘
+ │ ejb  │  │ ejb  │                   ▲
+ └──┬───┘  └──┬───┘                   │ HTTPS, адрес из реестра
+    │  Starship, два узла             │
+    └─────────┴───────────────────────┘
+                     │
+                     ▼
+        Consul :27500 — реестр сервисов
+        оба сервиса регистрируются при старте
+
+        PostgreSQL pg:5432/studs ◀── все узлы
 ```
 
 Бизнес-логика первого сервиса вынесена в Stateless EJB с Remote-интерфейсом; веб-модуль
@@ -145,7 +153,7 @@ Starship Service (`/starship`):
 
 ### Ручные запросы
 
-`docs/soa-lab2.insomnia.json` — коллекция для Insomnia со всеми операциями обоих сервисов,
+`docs/soa-lab3.insomnia.json` — коллекция для Insomnia со всеми операциями обоих сервисов,
 включая проверки кодов 400, 404, 405, 409, 422 и 503. Импорт: Application → Preferences →
 Data → Import Data → From File.
 
@@ -187,7 +195,8 @@ Starship springdoc описывает только из работающего �
 scp scripts/remote/*.sh ifmo:~/soa/bin/
 ssh ifmo '~/soa/bin/setup-secrets.sh'    # сертификаты, truststore, пароли
 ssh ifmo '~/soa/bin/setup-wildfly.sh spacemarine'   # узел WildFly: HTTPS, снос HTTP, датасорс, пул EJB
-ssh ifmo '~/soa/bin/setup-wildfly.sh starship-1'    # второй узел на своих портах
+ssh ifmo '~/soa/bin/setup-wildfly.sh starship-1'    # узлы Starship на своих портах
+ssh ifmo '~/soa/bin/setup-wildfly.sh starship-2'
 ssh ifmo '~/soa/bin/setup-consul.sh'     # реестр сервисов
 ssh ifmo '~/soa/bin/setup-haproxy.sh'    # балансировщик перед узлами Starship
 psql -h localhost -U <логин> -d studs -f db/schema.sql
@@ -201,7 +210,7 @@ psql -h localhost -U <логин> -d studs -f db/schema.sql
 ./scripts/deploy-services.sh    # собрать и развернуть оба сервиса
 ./scripts/deploy-services.sh spacemarine   # только первый: квота helios 1 ГиБ
 ./scripts/deploy-client.sh      # npm run build и выложить клиент
-./scripts/deploy-docs.sh lab2   # выложить Swagger UI
+./scripts/deploy-docs.sh      # выложить Swagger UI
 ssh ifmo '~/soa/bin/soa-control.sh status'
 ```
 
@@ -210,16 +219,17 @@ ssh ifmo '~/soa/bin/soa-control.sh status'
 Высокие порты helios закрыты извне, поэтому к сервисам обращаются через SSH-туннель:
 
 ```bash
-ssh -N -L 27443:127.0.0.1:27443 -L 27543:127.0.0.1:27543 ifmo
+ssh -N -L 27443:127.0.0.1:27443 -L 27343:127.0.0.1:27343 ifmo
 ```
 
 | Что | Адрес |
 |---|---|
-| Клиентское приложение | `https://se.ifmo.ru/~s409449/soa/lab2/` |
-| Веб-документация | `https://se.ifmo.ru/~s409449/soa/lab2/docs/` |
+| Клиентское приложение | `https://se.ifmo.ru/~s409449/soa/lab3/` |
+| Веб-документация | `https://se.ifmo.ru/~s409449/soa/lab3/docs/` |
 | SpaceMarine Service | `https://localhost:27443` (через туннель) |
-| Starship Service | `https://localhost:27543/starship` (через туннель) |
+| Starship Service | `https://localhost:27343/starship` (через балансировщик и туннель) |
 | Consul, реестр и UI | `http://localhost:27500` (через туннель) |
+| Узлы Starship напрямую | `https://localhost:27543`, `https://localhost:27643` |
 | HAProxy, статистика | `http://localhost:27344` (через туннель) |
 
 Consul и HAProxy ставятся пакетами из репозитория портов FreeBSD и распаковываются

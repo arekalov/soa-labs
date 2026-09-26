@@ -16,7 +16,8 @@ cd "$(dirname "$0")/.."
 SSH_HOST="${SSH_HOST:-ifmo}"
 WHAT="${1:-all}"
 SM_DEPLOY="soa/nodes/spacemarine/deployments"
-SS_DEPLOY="soa/nodes/starship-1/deployments"
+# Копии Starship: балансировщик раздаёт запросы между ними.
+SS_NODES="starship-1 starship-2"
 
 case "$WHAT" in
   spacemarine|starship|all) ;;
@@ -47,9 +48,14 @@ fi
 
 if [ "$WHAT" != spacemarine ]; then
   # Старую войну сносим до копирования новой: вдвоём они не помещаются в квоту.
-  ssh "$SSH_HOST" "cd ~/$SS_DEPLOY && rm -rf ROOT.war ROOT.war.* starship.war starship.war.* starship.ear starship.ear.*"
-  scp -q "$SS_EAR" "$SSH_HOST:~/$SS_DEPLOY/.starship.ear.tmp"
-  ssh "$SSH_HOST" "cd ~/$SS_DEPLOY && mv .starship.ear.tmp starship.ear"
+  for node in $SS_NODES; do
+    dir="soa/nodes/$node/deployments"
+    ssh "$SSH_HOST" "[ -d ~/$dir ] && cd ~/$dir && rm -rf ROOT.war ROOT.war.* starship.war starship.war.* starship.ear starship.ear.* || true"
+    ssh "$SSH_HOST" "[ -d ~/$dir ]" || { echo "  узел $node не настроен, пропускаю"; continue; }
+    scp -q "$SS_EAR" "$SSH_HOST:~/$dir/.starship.ear.tmp"
+    ssh "$SSH_HOST" "cd ~/$dir && mv .starship.ear.tmp starship.ear"
+    echo "  $node: артефакт скопирован"
+  done
 fi
 
 echo "==> Запускаю серверы"

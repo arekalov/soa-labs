@@ -9,7 +9,8 @@ set -euo pipefail
 cd "$(dirname "$0")/../client"
 
 SSH_HOST="${SSH_HOST:-ifmo}"
-REMOTE_DIR="${REMOTE_DIR:-public_html/soa/lab2}"
+LAB="${1:-lab3}"
+REMOTE_DIR="${REMOTE_DIR:-public_html/soa/$LAB}"
 DIST="dist"
 
 echo "==> Ставлю зависимости и собираю клиент"
@@ -32,4 +33,4 @@ ssh "$SSH_HOST" "
   find ~/$REMOTE_DIR -type f -exec chmod 644 {} \\;
 "
 
-echo "==> Готово: https://se.ifmo.ru/~s409449/soa/lab2/"
+echo "==> Готово: https://se.ifmo.ru/~s409449/soa/$LAB/"
