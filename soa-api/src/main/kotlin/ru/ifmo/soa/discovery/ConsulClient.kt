@@ -1,5 +1,6 @@
 package ru.ifmo.soa.discovery
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -29,6 +30,7 @@ data class ServiceNode(
 class ConsulClient(private val baseUrl: String) {
     private val log: Logger = Logger.getLogger(ConsulClient::class.java.name)
     private val http: HttpClient = HttpClient.newBuilder().connectTimeout(TIMEOUT).build()
+    private val json = ObjectMapper()
 
     fun register(node: ServiceNode) {
         val body = """
@@ -52,11 +54,23 @@ class ConsulClient(private val baseUrl: String) {
     fun deregister(node: ServiceNode) =
         send("PUT", "/v1/agent/service/deregister/${node.id}", "", "снятие регистрации ${node.id}")
 
-    /** Живые экземпляры сервиса: адреса вида `https://host:port`. Пустой список — сервиса нет. */
-    fun healthyInstances(serviceName: String): List<String> {
-        val response = request("GET", "/v1/health/service/$serviceName?passing=true", "") ?: return emptyList()
-        if (response.statusCode() != 200) return emptyList()
-        return ADDRESS.findAll(response.body()).map { "https://${it.groupValues[1]}:${it.groupValues[2]}" }.toList()
+    /**
+     * Живые экземпляры сервиса: адреса вида `https://host:port`.
+     *
+     * Пустой список означает, что сервис не зарегистрирован или не проходит проверку,
+     * а `null` — что недоступен сам реестр. Различать важно: в первом случае звать
+     * некого, во втором разумно воспользоваться адресом из настроек.
+     */
+    fun healthyInstances(serviceName: String): List<String>? {
+        val response = request("GET", "/v1/health/service/$serviceName?passing=true", "") ?: return null
+        if (response.statusCode() != 200) return null
+        return json.readTree(response.body()).mapNotNull { entry ->
+            val service = entry.path("Service")
+            // Адрес сервиса может быть пустым — тогда действует адрес узла.
+            val host = service.path("Address").asText("").ifBlank { entry.path("Node").path("Address").asText("") }
+            val port = service.path("Port").asInt(0)
+            if (host.isBlank() || port == 0) null else "https://$host:$port"
+        }
     }
 
     private fun send(method: String, path: String, body: String, what: String) {
@@ -79,9 +93,5 @@ class ConsulClient(private val baseUrl: String) {
     } catch (e: Exception) {
         log.log(Level.FINE, "Запрос к Consul не удался", e)
         null
-    }
-
-    private companion object {
-        val ADDRESS = Regex("\"ServiceAddress\":\"([^\"]*)\".*?\"ServicePort\":(\\d+)")
     }
 }
