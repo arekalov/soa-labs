@@ -148,6 +148,8 @@ scp scripts/remote/*.sh ifmo:~/soa/bin/
 ssh ifmo '~/soa/bin/setup-secrets.sh'    # сертификаты, truststore, пароли
 ssh ifmo '~/soa/bin/setup-wildfly.sh'    # экземпляр WildFly: HTTPS, снос HTTP, датасорс
 ssh ifmo '~/soa/bin/setup-tomcat.sh'     # экземпляр Tomcat: только HTTPS-коннектор
+ssh ifmo '~/soa/bin/setup-consul.sh'     # реестр сервисов
+ssh ifmo '~/soa/bin/setup-haproxy.sh'    # балансировщик перед узлами Starship
 psql -h localhost -U <логин> -d studs -f db/schema.sql
 ```
 
@@ -176,6 +178,12 @@ ssh -N -L 27443:127.0.0.1:27443 -L 27543:127.0.0.1:27543 ifmo
 | Веб-документация | `https://se.ifmo.ru/~s409449/soa/lab2/docs/` |
 | SpaceMarine Service | `https://localhost:27443` (через туннель) |
 | Starship Service | `https://localhost:27543/starship` (через туннель) |
+| Consul, реестр и UI | `http://localhost:27500` (через туннель) |
+| HAProxy, статистика | `http://localhost:27344` (через туннель) |
+
+Consul и HAProxy ставятся пакетами из репозитория портов FreeBSD и распаковываются
+в `~/soa/opt` без root: сборок под FreeBSD ни HashiCorp, ни HAProxy не публикуют,
+а компилировать из исходников незачем.
 
 Порты на helios ни за кем не закреплены: занятый соседом порт WildFly не занимает,
 а молча остаётся без HTTPS-слушателя. Если сервис не отвечает — сначала

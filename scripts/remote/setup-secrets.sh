@@ -112,6 +112,21 @@ for SVC in spacemarine starship; do
     -file "$SECRETS/$SVC.crt"
 done
 
+# --- PEM для HAProxy ---------------------------------------------------------
+# Балансировщик хочет ключ и сертификат одним файлом, хранилища PKCS12 не понимает.
+PEM="$SECRETS/starship.pem"
+if [ -f "$PEM" ]; then
+  echo "== starship.pem уже существует, пропускаю =="
+else
+  echo "== собираю starship.pem для HAProxy =="
+  umask 077
+  openssl pkcs12 -in "$SECRETS/starship.p12" -passin "pass:$SOA_KEYSTORE_PASSWORD" \
+    -nodes -legacy -out "$PEM" 2>/dev/null \
+    || openssl pkcs12 -in "$SECRETS/starship.p12" -passin "pass:$SOA_KEYSTORE_PASSWORD" \
+         -nodes -out "$PEM"
+  chmod 600 "$PEM"
+fi
+
 # --- truststore -------------------------------------------------------------
 # Копия системного cacerts, а не пустое хранилище: иначе сломались бы любые
 # обращения к публичным HTTPS, которым доверяют по обычной цепочке.

@@ -25,6 +25,12 @@ TOMCAT_HOME="$SOA/tomcat-home"
 TOMCAT_BASE="$SOA/base-starship"
 TOMCAT_HTTPS="${TOMCAT_HTTPS:-27543}"
 
+OPT="$SOA/opt"
+CONSUL_HOME="$SOA/consul"
+CONSUL_HTTP="${CONSUL_HTTP:-27500}"
+HAPROXY_HOME="$SOA/haproxy"
+HAPROXY_PORT="${HAPROXY_PORT:-27343}"
+
 mkdir -p "$RUN" "$LOGS"
 
 # Ключевая настройка для helios. Здесь rlimit stacksize равен 512 МБ, и под стек
@@ -63,6 +69,10 @@ alive() {  # alive <имя>
 # память. Запуск второй JVM в этот момент приводит к отказу создания потока.
 app_ready() {  # app_ready <порт> <сертификат> <путь>
     curl -s -o /dev/null --max-time 5 --cacert "$2" "https://127.0.0.1:$1$3" 2>/dev/null
+}
+
+http_ready() {  # http_ready <порт> <путь>
+    curl -s -o /dev/null --max-time 5 "http://127.0.0.1:$1$2" 2>/dev/null
 }
 
 wait_ready() {  # wait_ready <порт> <сертификат> <путь> <попыток>
@@ -163,6 +173,40 @@ start_tomcat() {
     echo "  tomcat запускается (https=$TOMCAT_HTTPS)"
 }
 
+# --------------------------------------------------------- Consul и HAProxy
+
+start_consul() {
+    if alive consul; then
+        echo "  consul уже работает"
+        return 0
+    fi
+    [ -x "$OPT/bin/consul" ] || { echo "  consul не установлен, пропускаю"; return 0; }
+
+    /usr/sbin/daemon -r -f \
+        -P "$RUN/consul.sup.pid" -p "$RUN/consul.pid" \
+        -o "$LOGS/consul.out" \
+        "$OPT/bin/consul" agent -config-file="$CONSUL_HOME/consul.hcl"
+
+    echo "  consul запускается (http=$CONSUL_HTTP)"
+}
+
+start_haproxy() {
+    if alive haproxy; then
+        echo "  haproxy уже работает"
+        return 0
+    fi
+    [ -x "$OPT/sbin/haproxy" ] || { echo "  haproxy не установлен, пропускаю"; return 0; }
+
+    # -db держит процесс на переднем плане: иначе haproxy демонизируется сам
+    # и daemon запишет pid умершего родителя.
+    /usr/sbin/daemon -r -f \
+        -P "$RUN/haproxy.sup.pid" -p "$RUN/haproxy.pid" \
+        -o "$LOGS/haproxy.out" \
+        "$OPT/sbin/haproxy" -db -f "$HAPROXY_HOME/haproxy.cfg"
+
+    echo "  haproxy запускается (https=$HAPROXY_PORT)"
+}
+
 # ----------------------------------------------------------------------- вывод
 
 show_status() {
@@ -175,6 +219,19 @@ show_status() {
         app_ready "$port" "$SECRETS/$cert.crt" "$path" && state="$port отвечает" || state="$port не отвечает"
         printf "%-18s %-12s %s\n" "$name" "$proc" "$state"
     done
+
+    local proc state
+    alive consul && proc="работает" || proc="остановлен"
+    http_ready "$CONSUL_HTTP" "/v1/status/leader" && state="$CONSUL_HTTP отвечает" || state="$CONSUL_HTTP не отвечает"
+    printf "%-18s %-12s %s\n" "consul" "$proc" "$state"
+
+    # Именно 200: при мёртвых узлах балансировщик отвечает своей страницей 503,
+    # и проверка «сокет ответил» показала бы работоспособность там, где её нет.
+    alive haproxy && proc="работает" || proc="остановлен"
+    [ "$(curl -s -o /dev/null --max-time 5 --cacert "$SECRETS/starship.crt" \
+         -w "%{http_code}" "https://127.0.0.1:$HAPROXY_PORT/starship?size=1" 2>/dev/null)" = "200" ] \
+        && state="$HAPROXY_PORT отвечает" || state="$HAPROXY_PORT не отвечает"
+    printf "%-18s %-12s %s\n" "haproxy" "$proc" "$state"
 }
 
 # ------------------------------------------------------------------- диспетчер
@@ -182,6 +239,7 @@ show_status() {
 case "${1:-status}" in
     start)
         echo "Запуск:"
+        start_consul
         start_wildfly
 
         # Серверы поднимаются строго по очереди. Одновременный старт двух JVM
@@ -202,13 +260,17 @@ case "${1:-status}" in
 
         start_tomcat
         wait_ready "$TOMCAT_HTTPS" "$SECRETS/starship.crt" "/starship/create/0/x" >/dev/null
+
+        start_haproxy
         echo
         show_status
         ;;
     stop)
         echo "Остановка:"
+        stop_one haproxy "$HAPROXY_HOME/haproxy.cfg"
         stop_one tomcat-starship "catalina.base=$TOMCAT_BASE"
         stop_one wildfly "jboss.home.dir=$WILDFLY"
+        stop_one consul "$CONSUL_HOME/consul.hcl"
         ;;
     restart)
         "$0" stop
