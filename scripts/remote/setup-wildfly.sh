@@ -21,16 +21,26 @@ JDK="${JDK:-/usr/local/openjdk21}"
 PORT_OFFSET="${PORT_OFFSET:-19000}"   # https -> 27443, management -> 28990
 EJB_POOL_SIZE="${EJB_POOL_SIZE:-32}"
 
+CONSUL_URL="${CONSUL_URL:-http://127.0.0.1:27500}"
+SERVICE_NAME="${SERVICE_NAME:-spacemarine}"
+SERVICE_HOST="${SERVICE_HOST:-helios.cs.ifmo.ru}"
+SERVICE_PORT="${SERVICE_PORT:-$((8443 + PORT_OFFSET))}"
+
 [ -d "$SOURCE_WILDFLY" ] || { echo "Не найден исходный WildFly: $SOURCE_WILDFLY" >&2; exit 1; }
 [ -f "$SECRETS/soa.env" ] || { echo "Сначала выполните setup-secrets.sh" >&2; exit 1; }
 
 # shellcheck disable=SC1091
 . "$SECRETS/soa.env"
 
+# Дамп упавшей JVM — это 660 МБ при квоте 1 ГиБ: одним падением выносит весь каталог.
+ulimit -c 0 2>/dev/null || true
+
 export JAVA_HOME="$JDK"
 export PATH="$JDK/bin:$PATH"
-# Без явного лимита JVM на helios пытается взять четверть от 128 ГБ и падает.
-export JAVA_OPTS="-Xms64m -Xmx512m -Djava.net.preferIPv4Stack=true -Dfile.encoding=UTF-8"
+# Без явных лимитов JVM на helios берёт четверть от 128 ГБ под кучу и резервирует
+# гигабайт под compressed class space — и то и другое упирается в rlimit datasize.
+export JAVA_OPTS="-Xms64m -Xmx512m -XX:CompressedClassSpaceSize=64m -XX:MaxMetaspaceSize=192m"
+export JAVA_OPTS="$JAVA_OPTS -Djava.net.preferIPv4Stack=true -Dfile.encoding=UTF-8"
 
 # --- копия экземпляра -------------------------------------------------------
 if [ -d "$TARGET" ]; then
@@ -64,6 +74,10 @@ cat > "$SECRETS/wildfly.properties" <<EOF
 soa.keystore.password=$SOA_KEYSTORE_PASSWORD
 soa.db.user=$SOA_DB_USER
 soa.db.password=$SOA_DB_PASSWORD
+soa.consul.url=$CONSUL_URL
+soa.service.name=$SERVICE_NAME
+soa.service.host=$SERVICE_HOST
+soa.service.port=$SERVICE_PORT
 EOF
 chmod 600 "$SECRETS/wildfly.properties"
 

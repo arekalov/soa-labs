@@ -44,6 +44,9 @@ mkdir -p "$RUN" "$LOGS"
 # из rlimit, поэтому ограничиваем и его. Наследуется всеми потомками, включая daemon.
 ulimit -s 8192 2>/dev/null || true
 
+# Дамп упавшей JVM — это 660 МБ при квоте 1 ГиБ: одним падением выносит весь каталог.
+ulimit -c 0 2>/dev/null || true
+
 export JAVA_HOME="$JDK"
 export PATH="$JDK/bin:$PATH"
 
