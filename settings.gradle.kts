@@ -1,4 +1,5 @@
-rootProject.name = "soa-lab2"
+rootProject.name = "soa-lab3"
 
-include("spacemarine-service")
+include("soa-api")
+include("spacemarine:ejb", "spacemarine:web", "spacemarine:ear")
 include("starship-service")

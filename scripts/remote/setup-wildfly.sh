@@ -19,6 +19,7 @@ JDK="${JDK:-/usr/local/openjdk21}"
 # Порты на helios ни за кем не закреплены: прежнее смещение 16000 давало https 24443,
 # и его занял чужой ЛР2 — WildFly молча стартовал без HTTPS-слушателя.
 PORT_OFFSET="${PORT_OFFSET:-19000}"   # https -> 27443, management -> 28990
+EJB_POOL_SIZE="${EJB_POOL_SIZE:-32}"
 
 [ -d "$SOURCE_WILDFLY" ] || { echo "Не найден исходный WildFly: $SOURCE_WILDFLY" >&2; exit 1; }
 [ -f "$SECRETS/soa.env" ] || { echo "Сначала выполните setup-secrets.sh" >&2; exit 1; }
@@ -121,18 +122,37 @@ end-if
 /subsystem=undertow/server=default-server/https-listener=https:write-attribute( \\
     name=ssl-context, value=soaSSC)
 
-# --- зависимости, висящие на HTTP-слушателе ---
-# Коннектор remoting подключён к http-listener, а на него, в свою очередь, опирается
-# удалённый доступ к EJB. Если просто удалить слушатель, подсистема ejb3 не стартует
-# и утащит за собой полтора десятка сервисов — включая регистрацию веб-контекста,
-# из-за чего приложение разворачивается, но отвечает 404 на все пути.
-# Удалённые EJB спецификацией не предусмотрены, поэтому убираем оба.
+# --- удалённый доступ к EJB ---
+# Коннектор remoting из поставки висит на http-listener, а его мы удаляем ниже: HTTP запрещён.
+# Пересоздаём коннектор на https-listener — апгрейд протокола работает и поверх TLS.
+# Без службы remote вид @Remote не поднимается и всё развёртывание падает с org.wildfly.ejb.remote.
 if (outcome == success) of /subsystem=ejb3/service=remote:read-resource
     /subsystem=ejb3/service=remote:remove
 end-if
 if (outcome == success) of /subsystem=remoting/http-connector=http-remoting-connector:read-resource
     /subsystem=remoting/http-connector=http-remoting-connector:remove
 end-if
+if (outcome == success) of /subsystem=remoting/http-connector=https-remoting-connector:read-resource
+    /subsystem=remoting/http-connector=https-remoting-connector:remove
+end-if
+/subsystem=remoting/http-connector=https-remoting-connector:add( \\
+    connector-ref=https, \\
+    sasl-authentication-factory=application-sasl-authentication)
+/subsystem=ejb3/service=remote:add( \\
+    connectors=[https-remoting-connector], \\
+    thread-pool-name=default)
+
+# --- пул компонентов EJB ---
+# По умолчанию размер выводится из пула воркеров; задание требует настраиваемую мощность,
+# поэтому задаём верхнюю границу явно. Экземпляры создаются по мере роста нагрузки,
+# а при исчерпании пула вызов ждёт освобождения не дольше таймаута.
+/subsystem=ejb3/strict-max-bean-instance-pool=slsb-strict-max-pool:undefine-attribute(name=derive-size)
+/subsystem=ejb3/strict-max-bean-instance-pool=slsb-strict-max-pool:write-attribute( \\
+    name=max-pool-size, value=$EJB_POOL_SIZE)
+/subsystem=ejb3/strict-max-bean-instance-pool=slsb-strict-max-pool:write-attribute( \\
+    name=timeout, value=10)
+/subsystem=ejb3/strict-max-bean-instance-pool=slsb-strict-max-pool:write-attribute( \\
+    name=timeout-unit, value=SECONDS)
 
 # --- запрет HTTP: слушателя нет, значит и обслуживать некому ---
 # Порядок важен: сначала слушатель, потом сокет, иначе "capability in use".
@@ -171,4 +191,5 @@ grep -o 'socket-binding name="https" port="[^"]*"' "$TARGET/standalone/configura
 grep -o 'server-ssl-context name="soaSSC"[^>]*' "$TARGET/standalone/configuration/standalone.xml" || true
 grep -o 'jndi-name="java:jboss/datasources/SpaceMarineDS"' "$TARGET/standalone/configuration/standalone.xml" || true
 echo
+grep -o 'strict-max-pool name="slsb-strict-max-pool"[^/]*' "$TARGET/standalone/configuration/standalone.xml" || true
 echo "Порты при смещении $PORT_OFFSET: https=$((8443 + PORT_OFFSET)), management=$((9990 + PORT_OFFSET))"

@@ -14,11 +14,11 @@ OUT="docs/generated"
 mkdir -p "$OUT"
 
 echo "==> Генерирую спецификации"
-./gradlew -q :spacemarine-service:generateOpenApiSpec :starship-service:generateOpenApiDocs
+./gradlew -q :spacemarine:web:generateOpenApiSpec :starship-service:generateOpenApiDocs
 
 # Плагины пишут в build/: если отдать им docs/generated как выходной каталог,
 # Gradle считает его своим и удаляет оттуда всё постороннее, включая changelog.
-cp spacemarine-service/build/generated/openapi/spacemarine-service.yaml "$OUT/"
+cp spacemarine/web/build/generated/openapi/spacemarine-service.yaml "$OUT/"
 cp starship-service/build/openapi/starship-service.yaml "$OUT/"
 
 command -v oasdiff >/dev/null || { echo "oasdiff не установлен: brew install oasdiff" >&2; exit 1; }

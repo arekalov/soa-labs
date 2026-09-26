@@ -2,22 +2,33 @@
 #
 # Сборка и развёртывание обоих веб-сервисов. Запускается С НОУТБУКА.
 #
-# Собираем локально и отправляем готовые WAR: на helios нет kotlinc, а общий диск
+# Собираем локально и отправляем готовые артефакты: на helios нет kotlinc, а общий диск
 # делает сборку там мучительно медленной.
+#
+#   ./scripts/deploy-services.sh [spacemarine|starship|all]
+#
+# Разворачивать по отдельности приходится из-за квоты в 1 ГиБ на helios: война Starship
+# весит 57 МБ, и лишняя выкладка не влезает.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
 SSH_HOST="${SSH_HOST:-ifmo}"
+WHAT="${1:-all}"
 WILDFLY_DEPLOY="soa/wildfly-spacemarine/standalone/deployments"
 TOMCAT_WEBAPPS="soa/base-starship/webapps"
 
-echo "==> Собираю сервисы"
-./gradlew :spacemarine-service:war :starship-service:bootWar
+case "$WHAT" in
+  spacemarine|starship|all) ;;
+  *) echo "Неизвестная цель «$WHAT» (spacemarine|starship|all)" >&2; exit 1 ;;
+esac
 
-SM_WAR="spacemarine-service/build/libs/spacemarine-service.war"
+SM_EAR="spacemarine/ear/build/libs/spacemarine.ear"
 SS_WAR="starship-service/build/libs/starship.war"
-[ -f "$SM_WAR" ] && [ -f "$SS_WAR" ] || { echo "Не найдены артефакты сборки" >&2; exit 1; }
+
+echo "==> Собираю: $WHAT"
+[ "$WHAT" = starship ] || ./gradlew :spacemarine:ear:ear
+[ "$WHAT" = spacemarine ] || ./gradlew :starship-service:bootWar
 
 echo "==> Останавливаю серверы"
 ssh "$SSH_HOST" '~/soa/bin/soa-control.sh stop' || true
@@ -25,18 +36,21 @@ ssh "$SSH_HOST" '~/soa/bin/soa-control.sh stop' || true
 echo "==> Копирую артефакты"
 # Копируем во временное имя и переименовываем на месте: и сканер WildFly,
 # и autoDeploy Tomcat умеют подхватить недокопированный архив и упасть на Invalid zip.
-scp -q "$SM_WAR" "$SSH_HOST:~/$WILDFLY_DEPLOY/.spacemarine-service.war.tmp"
-scp -q "$SS_WAR" "$SSH_HOST:~/$TOMCAT_WEBAPPS/.starship.war.tmp"
+if [ "$WHAT" != starship ]; then
+  scp -q "$SM_EAR" "$SSH_HOST:~/$WILDFLY_DEPLOY/.spacemarine.ear.tmp"
+  ssh "$SSH_HOST" "
+    cd ~/$WILDFLY_DEPLOY
+    rm -rf spacemarine-service.war spacemarine-service.war.* spacemarine.ear spacemarine.ear.*
+    mv .spacemarine.ear.tmp spacemarine.ear
+  "
+fi
 
-ssh "$SSH_HOST" "
-  cd ~/$WILDFLY_DEPLOY
-  rm -f spacemarine-service.war spacemarine-service.war.*
-  mv .spacemarine-service.war.tmp spacemarine-service.war
-
-  cd ~/$TOMCAT_WEBAPPS
-  rm -rf starship starship.war
-  mv .starship.war.tmp starship.war
-"
+if [ "$WHAT" != spacemarine ]; then
+  # Старую войну сносим до копирования новой: вдвоём они не помещаются в квоту.
+  ssh "$SSH_HOST" "cd ~/$TOMCAT_WEBAPPS && rm -rf starship starship.war"
+  scp -q "$SS_WAR" "$SSH_HOST:~/$TOMCAT_WEBAPPS/.starship.war.tmp"
+  ssh "$SSH_HOST" "cd ~/$TOMCAT_WEBAPPS && mv .starship.war.tmp starship.war"
+fi
 
 echo "==> Запускаю серверы"
 # Серверы поднимаются по очереди — так устроен soa-control.sh: одновременный старт

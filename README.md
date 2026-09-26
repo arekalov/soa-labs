@@ -1,6 +1,7 @@
-# СОА. Лабораторная работа №2
+# СОА. Лабораторная работа №3
 
-**Вариант:** 73126
+**Вариант:** 9987654
+**Вариант ЛР2:** 73126
 **Выполнили:** Рекалов Артём Олегович, Кирячек Тимофей Алексеевич
 
 ## Задание
@@ -29,20 +30,46 @@
 
 | Компонент | Технология | Сервер приложений |
 |---|---|---|
-| SpaceMarine Service | Kotlin, JAX-RS | WildFly |
+| SpaceMarine Service | Kotlin, JAX-RS, Stateless EJB | WildFly, EAR |
 | Starship Service | Kotlin, Spring MVC REST | Tomcat |
+| Реестр сервисов | Consul | — |
+| Балансировщик | HAProxy | — |
 | Клиентское приложение | React, TypeScript (Vite) | статика на helios |
 
-Оба сервиса построены одинаково: контроллер принимает запрос, сервис содержит правила и
-границы транзакций, репозиторий работает с БД. Направление зависимостей закреплено
-архитектурным тестом на ArchUnit, тексты сообщений вынесены в `Messages`, один класс — один файл.
+### Схема системы
+
+```
+        браузер, Insomnia  —— SSH-туннель ——┐
+                                            │
+        ┌───────────────────────────────────┴──────────────┐
+        ▼                                                  ▼
+   HAProxy :27343                              SpaceMarine, WildFly :27443
+        │                                      ┌──────────────────────────┐
+        ▼                                      │ spacemarine-web.war      │
+   Starship :27543                             │   JAX-RS, только вызовы  │
+   Tomcat, Spring MVC                          │        │ @EJB           │
+        │                                      │ spacemarine-ejb.jar     │
+        │  вызов API первого сервиса           │   @Stateless, пул на 32 │
+        └─────────────────────────────────────▶└───────────┬──────────────┘
+                                                           │
+   Consul :27500 — реестр сервисов                         │
+                                                           ▼
+   PostgreSQL pg:5432/studs ◀────────────────────────── все узлы
+```
+
+Бизнес-логика первого сервиса вынесена в Stateless EJB с Remote-интерфейсом; веб-модуль
+только принимает запрос, разбирает параметры и зовёт бизнес-интерфейс. Контракт между
+модулями — Java-интерфейс из `soa-api`, поэтому все DTO сериализуемы.
 
 Спецификация из ЛР1 лежит в `docs/` и является контрактом — реализация обязана соответствовать ей строго.
 
 ### Структура
 
 ```
-spacemarine-service/   JAX-RS, разворачивается на WildFly как ROOT
+soa-api/               @Remote-интерфейсы, DTO, запросы и исключения — общий контракт
+spacemarine/ejb/       @Stateless, репозиторий на JPA Criteria API, сущности
+spacemarine/web/       JAX-RS: контроллер, фильтры, мапперы ошибок
+spacemarine/ear/       сборка EAR из ejb + web, общие библиотеки в lib/
 starship-service/      Spring MVC и Spring Data, разворачивается на Tomcat как starship.war
 client/                React + TypeScript (Vite), статика
 db/                    DDL, миграции и скрипт очистки схемы
@@ -51,24 +78,25 @@ scripts/remote/        настройка и управление сервера
 docs/                  спецификация OpenAPI и Swagger UI
 ```
 
-Пакеты внутри сервиса:
+Пакеты:
 
 ```
-controller/  приём запроса, разбор параметров, ответ
-service/     правила предметной области и транзакции
-repository/  доступ к БД
-client/      обращение к соседнему сервису (только Starship)
-model/       сущности JPA
-dto/         транспортные объекты схем спецификации
-mapper/      перевод между сущностью и DTO
+api/         Remote-интерфейс, общие константы, настроенный ObjectMapper
+dto/         транспортные объекты схем спецификации, все Serializable
 query/       фильтры, сортировка, страницы
-exception/   ошибки и их перевод в коды ответов
+exception/   доменные ошибки, помеченные @ApplicationException
+controller/  приём запроса, разбор параметров, ответ
+config/      провайдеры JAX-RS: CORS, ObjectMapper, перевод ошибок в коды
+service/     бизнес-компонент и проверка ограничений
+repository/  доступ к БД
+model/       сущности JPA
+mapper/      перевод между сущностью и DTO
 Messages.kt  все тексты, уходящие клиенту
 ```
 
-Хранилище первого сервиса написано на JPA Criteria API: он разворачивается на WildFly
-и построен на CDI, контекста Spring в нём нет. Второй использует Spring Data — выборку
-по спецификациям, постраничный вывод и производные методы запросов.
+Хранилище первого сервиса написано на JPA Criteria API: контекста Spring в нём нет.
+Второй пока использует Spring Data — выборку по спецификациям, постраничный вывод
+и производные методы запросов.
 
 Клиент разложен по Feature-Sliced Design: `app`, `pages`, `widgets`, `features`,
 `entities`, `shared`. Импорты идут только вниз по этому списку, у каждого слайса
@@ -159,6 +187,7 @@ psql -h localhost -U <логин> -d studs -f db/schema.sql
 
 ```bash
 ./scripts/deploy-services.sh    # собрать и развернуть оба сервиса
+./scripts/deploy-services.sh spacemarine   # только первый: квота helios 1 ГиБ
 ./scripts/deploy-client.sh      # npm run build и выложить клиент
 ./scripts/deploy-docs.sh lab2   # выложить Swagger UI
 ssh ifmo '~/soa/bin/soa-control.sh status'
