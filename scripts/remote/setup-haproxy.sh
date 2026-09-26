@@ -45,6 +45,9 @@ cat > "$HAPROXY_HOME/haproxy.cfg" <<EOF
 global
     maxconn 256
     log stdout format raw local0 info
+    # По умолчанию поток на ядро, а их у helios десятки при лимите потоков на
+    # пользователя. Нагрузка лабораторная, одного рабочего потока хватает.
+    nbthread 1
 
 defaults
     mode    http

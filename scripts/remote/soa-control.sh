@@ -75,14 +75,16 @@ node_health() {  # node_health <узел>
 
 node_port() { echo $((8443 + $(node_offset "$1"))); }
 
-nodes() {
-    local dir name
-    for dir in "$NODES_DIR"/*; do
-        [ -d "$dir" ] || continue
-        name="$(basename "$dir")"
-        [ -n "$(node_offset "$name")" ] && echo "$name"
-    done
-}
+# Список собирается один раз: на пике загрузки helios отказывает в fork,
+# и каждый лишний подпроцесс в цикле — риск не досчитаться узла.
+NODES=""
+for dir in "$NODES_DIR"/*; do
+    [ -d "$dir" ] || continue
+    name="${dir##*/}"
+    case "$name" in
+        spacemarine|starship-1|starship-2) NODES="$NODES $name" ;;
+    esac
+done
 
 # --------------------------------------------------------------------- утилиты
 
@@ -100,11 +102,12 @@ http_ready() {  # http_ready <порт> <путь>
 }
 
 wait_ready() {  # wait_ready <узел> <попыток>
-    local port cert path attempts="${2:-45}"
+    local port cert path attempts="${2:-40}" i=0
     port="$(node_port "$1")"; cert="$SECRETS/$(node_cert "$1").crt"; path="$(node_health "$1")"
-    for _ in $(seq 1 "$attempts"); do
+    while [ "$i" -lt "$attempts" ]; do
         [ "$(app_code "$port" "$cert" "$path")" = "200" ] && return 0
-        sleep 2
+        sleep 3
+        i=$((i + 1))
     done
     return 1
 }
@@ -183,6 +186,9 @@ start_consul() {
     fi
     [ -x "$OPT/bin/consul" ] || { echo "  consul не установлен, пропускаю"; return 0; }
 
+    # Go заводит рабочие потоки по числу ядер; на helios их десятки при общем
+    # лимите потоков на пользователя.
+    GOMAXPROCS=2 \
     /usr/sbin/daemon -r -f \
         -P "$RUN/consul.sup.pid" -p "$RUN/consul.pid" \
         -o "$LOGS/consul.out" \
@@ -213,7 +219,7 @@ start_haproxy() {
 show_status() {
     local name proc state code
     printf "%-14s %-12s %s\n" "УЗЕЛ" "ПРОЦЕСС" "HTTPS"
-    for name in $(nodes); do
+    for name in $NODES; do
         alive "$name" && proc="работает" || proc="остановлен"
         code="$(app_code "$(node_port "$name")" "$SECRETS/$(node_cert "$name").crt" "$(node_health "$name")")"
         [ "$code" = "200" ] && state="$(node_port "$name") отвечает" || state="$(node_port "$name") не отвечает ($code)"
@@ -242,10 +248,12 @@ case "${1:-status}" in
         # в выделение памяти под стеки потоков, пул соединений не может создать
         # housekeeper-поток, и Hibernate падает с "Unable to determine Dialect".
         # Симптом указывает куда угодно, только не на гонку за ресурсы.
-        for node in $(nodes); do
+        for node in $NODES; do
             start_node "$node"
             wait_ready "$node" && echo "  $node отвечает" || echo "  $node не ответил вовремя" >&2
-            sleep 3
+            # Пауза между узлами: пока предыдущая JVM не доспала свои пулы,
+            # следующей не хватает лимита на создание потоков.
+            sleep 10
         done
         start_haproxy
         echo
@@ -254,7 +262,7 @@ case "${1:-status}" in
     stop)
         echo "Остановка:"
         stop_one haproxy "$HAPROXY_HOME/haproxy.cfg"
-        for node in $(nodes); do
+        for node in $NODES; do
             stop_one "$node" "jboss.server.base.dir=$NODES_DIR/$node"
         done
         stop_one consul "$CONSUL_HOME/consul.hcl"
