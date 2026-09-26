@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Управление серверами ЛР2 на helios: start | stop | restart | status.
+# Управление серверами на helios: start | stop | restart | status.
 #
 # systemd на FreeBSD нет, crontab студентам запрещён, поэтому супервизор —
 # /usr/sbin/daemon -r: он поднимет процесс, если тот упадёт. Перезагрузку хоста
@@ -15,16 +15,10 @@ SOA="$HOME/soa"
 SECRETS="$SOA/secrets"
 RUN="$SOA/run"
 LOGS="$SOA/logs"
+NODES_DIR="$SOA/nodes"
 JDK="${JDK:-/usr/local/openjdk21}"
 
-WILDFLY="$SOA/wildfly-spacemarine"
-PORT_OFFSET="${PORT_OFFSET:-19000}"
-WILDFLY_HTTPS=$((8443 + PORT_OFFSET))
-
-TOMCAT_HOME="$SOA/tomcat-home"
-TOMCAT_BASE="$SOA/base-starship"
-TOMCAT_HTTPS="${TOMCAT_HTTPS:-27543}"
-
+WILDFLY_HOME="$SOA/wildfly-home"
 OPT="$SOA/opt"
 CONSUL_HOME="$SOA/consul"
 CONSUL_HTTP="${CONSUL_HTTP:-27500}"
@@ -39,26 +33,56 @@ mkdir -p "$RUN" "$LOGS"
 # с "Resource temporarily unavailable", пул соединений не создаёт свой поток,
 # а Hibernate падает с "Unable to determine Dialect". Ни один из симптомов
 # на настоящую причину не указывает.
-#
-# -Xss задаёт стек только потокам Java; часть служебных потоков берёт размер
-# из rlimit, поэтому ограничиваем и его. Наследуется всеми потомками, включая daemon.
-ulimit -s 8192 2>/dev/null || true
-
+ulimit -s 2048 2>/dev/null || true
 # Дамп упавшей JVM — это 660 МБ при квоте 1 ГиБ: одним падением выносит весь каталог.
 ulimit -c 0 2>/dev/null || true
 
 export JAVA_HOME="$JDK"
 export PATH="$JDK/bin:$PATH"
 
-# Общие флаги обеих JVM. Ограничение по числу потоков на пользователя здесь
-# упирается уже не в память, а в счётчик: pthread_create отказывает с EAGAIN
-# при стеке в 1 МБ. Размеры пулов — GC, JIT, воркеры Undertow и Tomcat — JVM
-# выводит из числа ядер, а их у helios десятки. Говорим ей, что ядра два:
-# все внутренние пулы ужимаются, а для лабораторной нагрузки этого с запасом.
-# SerialGC вдобавок не создаёт потоков сборщика вовсе.
-JVM_OPTS="-Xms64m -Xmx512m -Xss512k"
+# Общие флаги JVM. Ограничение по числу потоков на пользователя упирается не в память,
+# а в счётчик: pthread_create отказывает с EAGAIN при стеке в 1 МБ. Размеры пулов —
+# GC, JIT, воркеры Undertow — JVM выводит из числа ядер, а их у helios десятки.
+# Говорим ей, что ядра два; SerialGC вдобавок не создаёт потоков сборщика вовсе.
+JVM_OPTS="-Xms48m -Xmx320m -Xss256k -XX:CompressedClassSpaceSize=48m -XX:MaxMetaspaceSize=192m"
 JVM_OPTS="$JVM_OPTS -XX:ActiveProcessorCount=2 -XX:+UseSerialGC -XX:CICompilerCount=2"
 JVM_OPTS="$JVM_OPTS -Djava.net.preferIPv4Stack=true -Dfile.encoding=UTF-8"
+
+# --------------------------------------------------------------------- узлы
+
+node_offset() {  # node_offset <узел>
+    case "$1" in
+        spacemarine) echo 19000 ;;
+        starship-1)  echo 19100 ;;
+        starship-2)  echo 19200 ;;
+        *) echo "" ;;
+    esac
+}
+
+node_cert() {  # node_cert <узел>
+    case "$1" in
+        spacemarine) echo spacemarine ;;
+        *) echo starship ;;
+    esac
+}
+
+node_health() {  # node_health <узел>
+    case "$1" in
+        spacemarine) echo "/space-marines?size=1" ;;
+        *) echo "/starship?size=1" ;;
+    esac
+}
+
+node_port() { echo $((8443 + $(node_offset "$1"))); }
+
+nodes() {
+    local dir name
+    for dir in "$NODES_DIR"/*; do
+        [ -d "$dir" ] || continue
+        name="$(basename "$dir")"
+        [ -n "$(node_offset "$name")" ] && echo "$name"
+    done
+}
 
 # --------------------------------------------------------------------- утилиты
 
@@ -67,31 +91,26 @@ alive() {  # alive <имя>
     [ -f "$pidfile" ] && pgrep -F "$pidfile" >/dev/null 2>&1
 }
 
-# Готовность именно приложения, а не сокета: WildFly открывает порт задолго до того,
-# как заканчивает разворачивать WAR, и в этом промежутке продолжает жадно занимать
-# память. Запуск второй JVM в этот момент приводит к отказу создания потока.
-app_ready() {  # app_ready <порт> <сертификат> <путь>
-    curl -s -o /dev/null --max-time 5 --cacert "$2" "https://127.0.0.1:$1$3" 2>/dev/null
+app_code() {  # app_code <порт> <сертификат> <путь>
+    curl -s -o /dev/null --max-time 5 --cacert "$2" -w "%{http_code}" "https://127.0.0.1:$1$3" 2>/dev/null
 }
 
 http_ready() {  # http_ready <порт> <путь>
     curl -s -o /dev/null --max-time 5 "http://127.0.0.1:$1$2" 2>/dev/null
 }
 
-wait_ready() {  # wait_ready <порт> <сертификат> <путь> <попыток>
-    local attempts="${4:-45}"
+wait_ready() {  # wait_ready <узел> <попыток>
+    local port cert path attempts="${2:-45}"
+    port="$(node_port "$1")"; cert="$SECRETS/$(node_cert "$1").crt"; path="$(node_health "$1")"
     for _ in $(seq 1 "$attempts"); do
-        app_ready "$1" "$2" "$3" && return 0
+        [ "$(app_code "$port" "$cert" "$path")" = "200" ] && return 0
         sleep 2
     done
     return 1
 }
 
 stop_one() {  # stop_one <имя> <шаблон-пути-экземпляра>
-    local name="$1"
-    local pattern="${2:-}"
-    local sup="$RUN/$name.sup.pid"
-    local pid="$RUN/$name.pid"
+    local name="$1" pattern="${2:-}" sup="$RUN/$1.sup.pid" pid="$RUN/$1.pid"
 
     # Сначала супервизор, иначе daemon -r немедленно поднимет процесс обратно.
     if [ -f "$sup" ]; then
@@ -107,10 +126,9 @@ stop_one() {  # stop_one <имя> <шаблон-пути-экземпляра>
         pgrep -F "$pid" >/dev/null 2>&1 && kill -9 "$(cat "$pid")" 2>/dev/null
     fi
 
-    # И standalone.sh, и catalina.sh — это обёртки, которые запускают java
-    # дочерним процессом. daemon записывает pid обёртки, поэтому её смерть
-    # оставляет JVM жить и держать порт. Добиваем по пути нашего экземпляра:
-    # шаблон узкий, чужие JVM (например, курса BLPS) под него не подпадают.
+    # standalone.sh — обёртка, запускающая java дочерним процессом. daemon пишет pid
+    # обёртки, поэтому её смерть оставляет JVM жить и держать порт. Добиваем по пути
+    # экземпляра: шаблон узкий, чужие JVM под него не подпадают.
     if [ -n "$pattern" ]; then
         local leftovers
         leftovers="$(pgrep -f "$pattern" 2>/dev/null || true)"
@@ -128,52 +146,32 @@ stop_one() {  # stop_one <имя> <шаблон-пути-экземпляра>
 
 # -------------------------------------------------------------------- WildFly
 
-start_wildfly() {
-    if alive wildfly; then
-        echo "  wildfly уже работает"
+start_node() {  # start_node <узел>
+    local name="$1" base="$NODES_DIR/$1" offset
+    if alive "$name"; then
+        echo "  $name уже работает"
         return 0
     fi
-    [ -d "$WILDFLY" ] || { echo "  wildfly не установлен, пропускаю"; return 0; }
+    [ -d "$base" ] || { echo "  $name не настроен, пропускаю"; return 0; }
+    offset="$(node_offset "$name")"
 
-    # Два явных ограничения, без которых JVM на helios не живёт:
-    #
-    # -Xmx — иначе она просит четверть от 128 ГБ ОЗУ и падает на лимите datasize 32 ГБ.
-    #
-    # -Xss — здесь rlimit stacksize равен 512 МБ, и JVM отводит столько на стек каждого
-    # нативного потока. Пулы WildFly упираются в datasize уже на десятке потоков
-    # и валятся с "OutOfMemoryError: unable to create native thread", из-за чего
-    # молча не стартуют подсистемы JCA и JPA, то есть датасорс.
+    # Starship читает адрес БД и truststore из окружения — как раньше делал setenv.sh Tomcat.
+    # shellcheck disable=SC1091
+    . "$SECRETS/soa.env"
+    export SOA_KEYSTORE_PASSWORD SOA_TRUSTSTORE_PATH SOA_TRUSTSTORE_PASSWORD
+    export SOA_DB_URL SOA_DB_USER SOA_DB_PASSWORD SOA_SPACEMARINE_BASE_URL
+
     JAVA_OPTS="$JVM_OPTS" \
     /usr/sbin/daemon -r -f \
-        -P "$RUN/wildfly.sup.pid" -p "$RUN/wildfly.pid" \
-        -o "$LOGS/wildfly.out" \
-        "$WILDFLY/bin/standalone.sh" \
+        -P "$RUN/$name.sup.pid" -p "$RUN/$name.pid" \
+        -o "$LOGS/$name.out" \
+        "$WILDFLY_HOME/bin/standalone.sh" \
             -b 0.0.0.0 \
-            -Djboss.socket.binding.port-offset="$PORT_OFFSET" \
-            --properties="file://$SECRETS/wildfly.properties"
+            -Djboss.server.base.dir="$base" \
+            -Djboss.socket.binding.port-offset="$offset" \
+            --properties="file://$SECRETS/wildfly-$name.properties"
 
-    echo "  wildfly запускается (https=$WILDFLY_HTTPS)"
-}
-
-# --------------------------------------------------------------------- Tomcat
-
-start_tomcat() {
-    if alive tomcat-starship; then
-        echo "  tomcat уже работает"
-        return 0
-    fi
-    [ -d "$TOMCAT_BASE" ] || { echo "  tomcat не установлен, пропускаю"; return 0; }
-
-    # Именно `catalina.sh run` (foreground): при `start` Tomcat форкается сам,
-    # daemon потеряет процесс и pid-файл станет бесполезен.
-    CATALINA_HOME="$TOMCAT_HOME" CATALINA_BASE="$TOMCAT_BASE" \
-    CATALINA_OPTS="$JVM_OPTS" \
-    /usr/sbin/daemon -r -f \
-        -P "$RUN/tomcat-starship.sup.pid" -p "$RUN/tomcat-starship.pid" \
-        -o "$LOGS/tomcat-starship.out" \
-        "$TOMCAT_HOME/bin/catalina.sh" run
-
-    echo "  tomcat запускается (https=$TOMCAT_HTTPS)"
+    echo "  $name запускается (https=$((8443 + offset)))"
 }
 
 # --------------------------------------------------------- Consul и HAProxy
@@ -213,28 +211,25 @@ start_haproxy() {
 # ----------------------------------------------------------------------- вывод
 
 show_status() {
-    printf "%-18s %-12s %s\n" "СЕРВИС" "ПРОЦЕСС" "HTTPS"
-    for entry in "wildfly:$WILDFLY_HTTPS:spacemarine:/space-marines" \
-                 "tomcat-starship:$TOMCAT_HTTPS:starship:/starship"; do
-        local name port cert path proc state
-        IFS=: read -r name port cert path <<< "$entry"
+    local name proc state code
+    printf "%-14s %-12s %s\n" "УЗЕЛ" "ПРОЦЕСС" "HTTPS"
+    for name in $(nodes); do
         alive "$name" && proc="работает" || proc="остановлен"
-        app_ready "$port" "$SECRETS/$cert.crt" "$path" && state="$port отвечает" || state="$port не отвечает"
-        printf "%-18s %-12s %s\n" "$name" "$proc" "$state"
+        code="$(app_code "$(node_port "$name")" "$SECRETS/$(node_cert "$name").crt" "$(node_health "$name")")"
+        [ "$code" = "200" ] && state="$(node_port "$name") отвечает" || state="$(node_port "$name") не отвечает ($code)"
+        printf "%-14s %-12s %s\n" "$name" "$proc" "$state"
     done
 
-    local proc state
     alive consul && proc="работает" || proc="остановлен"
     http_ready "$CONSUL_HTTP" "/v1/status/leader" && state="$CONSUL_HTTP отвечает" || state="$CONSUL_HTTP не отвечает"
-    printf "%-18s %-12s %s\n" "consul" "$proc" "$state"
+    printf "%-14s %-12s %s\n" "consul" "$proc" "$state"
 
     # Именно 200: при мёртвых узлах балансировщик отвечает своей страницей 503,
     # и проверка «сокет ответил» показала бы работоспособность там, где её нет.
     alive haproxy && proc="работает" || proc="остановлен"
-    [ "$(curl -s -o /dev/null --max-time 5 --cacert "$SECRETS/starship.crt" \
-         -w "%{http_code}" "https://127.0.0.1:$HAPROXY_PORT/starship?size=1" 2>/dev/null)" = "200" ] \
-        && state="$HAPROXY_PORT отвечает" || state="$HAPROXY_PORT не отвечает"
-    printf "%-18s %-12s %s\n" "haproxy" "$proc" "$state"
+    code="$(app_code "$HAPROXY_PORT" "$SECRETS/starship.crt" "/starship?size=1")"
+    [ "$code" = "200" ] && state="$HAPROXY_PORT отвечает" || state="$HAPROXY_PORT не отвечает ($code)"
+    printf "%-14s %-12s %s\n" "haproxy" "$proc" "$state"
 }
 
 # ------------------------------------------------------------------- диспетчер
@@ -243,27 +238,15 @@ case "${1:-status}" in
     start)
         echo "Запуск:"
         start_consul
-        start_wildfly
-
-        # Серверы поднимаются строго по очереди. Одновременный старт двух JVM
-        # упирается в выделение памяти под стеки потоков: пул соединений не может
-        # создать housekeeper-поток, Hibernate остаётся без метаданных и падает
-        # с "Unable to determine Dialect". Симптом указывает куда угодно, только
-        # не на гонку за ресурсы, поэтому ловится такое долго.
-        #
-        # Ждать открытия порта недостаточно: WildFly слушает задолго до конца
-        # развёртывания. Ждём ответа самого приложения и даём ему устояться.
-        echo "  ждём готовности wildfly перед запуском tomcat..."
-        if wait_ready "$WILDFLY_HTTPS" "$SECRETS/spacemarine.crt" "/space-marines"; then
-            echo "  wildfly отвечает"
-        else
-            echo "  wildfly не ответил вовремя — tomcat всё равно запускаю" >&2
-        fi
-        sleep 5
-
-        start_tomcat
-        wait_ready "$TOMCAT_HTTPS" "$SECRETS/starship.crt" "/starship/create/0/x" >/dev/null
-
+        # Узлы поднимаются строго по очереди: одновременный старт двух JVM упирается
+        # в выделение памяти под стеки потоков, пул соединений не может создать
+        # housekeeper-поток, и Hibernate падает с "Unable to determine Dialect".
+        # Симптом указывает куда угодно, только не на гонку за ресурсы.
+        for node in $(nodes); do
+            start_node "$node"
+            wait_ready "$node" && echo "  $node отвечает" || echo "  $node не ответил вовремя" >&2
+            sleep 3
+        done
         start_haproxy
         echo
         show_status
@@ -271,8 +254,9 @@ case "${1:-status}" in
     stop)
         echo "Остановка:"
         stop_one haproxy "$HAPROXY_HOME/haproxy.cfg"
-        stop_one tomcat-starship "catalina.base=$TOMCAT_BASE"
-        stop_one wildfly "jboss.home.dir=$WILDFLY"
+        for node in $(nodes); do
+            stop_one "$node" "jboss.server.base.dir=$NODES_DIR/$node"
+        done
         stop_one consul "$CONSUL_HOME/consul.hcl"
         ;;
     restart)

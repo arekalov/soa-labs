@@ -50,7 +50,7 @@ tasks.named<War>("war") {
 
 tasks.named<BootWar>("bootWar") {
     enabled = true
-    archiveFileName.set("starship.war")
+    archiveFileName.set("ROOT.war")
 }
 
 // RestClientConfig читает truststore при старте, а настоящий лежит только на helios.

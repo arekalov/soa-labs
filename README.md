@@ -31,7 +31,7 @@
 | Компонент | Технология | Сервер приложений |
 |---|---|---|
 | SpaceMarine Service | Kotlin, JAX-RS, Stateless EJB | WildFly, EAR |
-| Starship Service | Kotlin, Spring MVC REST | Tomcat |
+| Starship Service | Kotlin, Spring MVC REST | WildFly |
 | Реестр сервисов | Consul | — |
 | Балансировщик | HAProxy | — |
 | Клиентское приложение | React, TypeScript (Vite) | статика на helios |
@@ -75,7 +75,7 @@ soa-api/               @Remote-интерфейсы, DTO, запросы и ис
 spacemarine/ejb/       @Stateless, репозиторий на JPA Criteria API, сущности
 spacemarine/web/       JAX-RS: контроллер, фильтры, мапперы ошибок
 spacemarine/ear/       сборка EAR из ejb + web, общие библиотеки в lib/
-starship-service/      Spring MVC и Spring Data, разворачивается на Tomcat как starship.war
+starship-service/      Spring MVC и Spring Data, разворачивается на WildFly как ROOT.war
 client/                React + TypeScript (Vite), статика
 db/                    DDL, миграции и скрипт очистки схемы
 scripts/               развёртывание с ноутбука
@@ -179,8 +179,8 @@ Starship springdoc описывает только из работающего �
 ```bash
 scp scripts/remote/*.sh ifmo:~/soa/bin/
 ssh ifmo '~/soa/bin/setup-secrets.sh'    # сертификаты, truststore, пароли
-ssh ifmo '~/soa/bin/setup-wildfly.sh'    # экземпляр WildFly: HTTPS, снос HTTP, датасорс
-ssh ifmo '~/soa/bin/setup-tomcat.sh'     # экземпляр Tomcat: только HTTPS-коннектор
+ssh ifmo '~/soa/bin/setup-wildfly.sh spacemarine'   # узел WildFly: HTTPS, снос HTTP, датасорс, пул EJB
+ssh ifmo '~/soa/bin/setup-wildfly.sh starship-1'    # второй узел на своих портах
 ssh ifmo '~/soa/bin/setup-consul.sh'     # реестр сервисов
 ssh ifmo '~/soa/bin/setup-haproxy.sh'    # балансировщик перед узлами Starship
 psql -h localhost -U <логин> -d studs -f db/schema.sql
@@ -218,6 +218,12 @@ ssh -N -L 27443:127.0.0.1:27443 -L 27543:127.0.0.1:27543 ifmo
 Consul и HAProxy ставятся пакетами из репозитория портов FreeBSD и распаковываются
 в `~/soa/opt` без root: сборок под FreeBSD ни HashiCorp, ни HAProxy не публикуют,
 а компилировать из исходников незачем.
+
+На helios действуют два ограничения, о которые легко споткнуться: квота в 1 ГиБ
+на домашний каталог и предел примерно в 190 процессов и потоков на пользователя.
+Поэтому установка WildFly одна на все узлы, у каждого узла только свой каталог
+в `~/soa/nodes`, из конфигурации вычищены неиспользуемые подсистемы, а дампы
+упавших JVM запрещены через `ulimit -c 0` — один такой дамп занимал 660 МБ.
 
 Порты на helios ни за кем не закреплены: занятый соседом порт WildFly не занимает,
 а молча остаётся без HTTPS-слушателя. Если сервис не отвечает — сначала

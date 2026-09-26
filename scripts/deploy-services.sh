@@ -15,8 +15,8 @@ cd "$(dirname "$0")/.."
 
 SSH_HOST="${SSH_HOST:-ifmo}"
 WHAT="${1:-all}"
-WILDFLY_DEPLOY="soa/wildfly-spacemarine/standalone/deployments"
-TOMCAT_WEBAPPS="soa/base-starship/webapps"
+SM_DEPLOY="soa/nodes/spacemarine/deployments"
+SS_DEPLOY="soa/nodes/starship-1/deployments"
 
 case "$WHAT" in
   spacemarine|starship|all) ;;
@@ -24,7 +24,7 @@ case "$WHAT" in
 esac
 
 SM_EAR="spacemarine/ear/build/libs/spacemarine.ear"
-SS_WAR="starship-service/build/libs/starship.war"
+SS_WAR="starship-service/build/libs/ROOT.war"
 
 echo "==> Собираю: $WHAT"
 [ "$WHAT" = starship ] || ./gradlew :spacemarine:ear:ear
@@ -37,9 +37,9 @@ echo "==> Копирую артефакты"
 # Копируем во временное имя и переименовываем на месте: и сканер WildFly,
 # и autoDeploy Tomcat умеют подхватить недокопированный архив и упасть на Invalid zip.
 if [ "$WHAT" != starship ]; then
-  scp -q "$SM_EAR" "$SSH_HOST:~/$WILDFLY_DEPLOY/.spacemarine.ear.tmp"
+  scp -q "$SM_EAR" "$SSH_HOST:~/$SM_DEPLOY/.spacemarine.ear.tmp"
   ssh "$SSH_HOST" "
-    cd ~/$WILDFLY_DEPLOY
+    cd ~/$SM_DEPLOY
     rm -rf spacemarine-service.war spacemarine-service.war.* spacemarine.ear spacemarine.ear.*
     mv .spacemarine.ear.tmp spacemarine.ear
   "
@@ -47,9 +47,9 @@ fi
 
 if [ "$WHAT" != spacemarine ]; then
   # Старую войну сносим до копирования новой: вдвоём они не помещаются в квоту.
-  ssh "$SSH_HOST" "cd ~/$TOMCAT_WEBAPPS && rm -rf starship starship.war"
-  scp -q "$SS_WAR" "$SSH_HOST:~/$TOMCAT_WEBAPPS/.starship.war.tmp"
-  ssh "$SSH_HOST" "cd ~/$TOMCAT_WEBAPPS && mv .starship.war.tmp starship.war"
+  ssh "$SSH_HOST" "cd ~/$SS_DEPLOY && rm -rf ROOT.war ROOT.war.* starship.war starship.war.*"
+  scp -q "$SS_WAR" "$SSH_HOST:~/$SS_DEPLOY/.ROOT.war.tmp"
+  ssh "$SSH_HOST" "cd ~/$SS_DEPLOY && mv .ROOT.war.tmp ROOT.war"
 fi
 
 echo "==> Запускаю серверы"

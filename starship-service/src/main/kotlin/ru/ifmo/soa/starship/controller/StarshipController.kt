@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import ru.ifmo.soa.starship.Messages
@@ -22,11 +23,13 @@ import ru.ifmo.soa.starship.service.StarshipService
 /**
  * Операции второго сервиса: две из спецификации ЛР1 и базовый набор над коллекцией.
  *
- * Префикс `/starship` даёт контекст развёртывания (WAR называется `starship.war`),
- * поэтому в аннотациях он не повторяется. Литеральные сегменты вроде `create`
- * Spring сопоставляет раньше шаблонов `{id}`, так что пересечений нет.
+ * Префикс задан здесь, а не контекстом развёртывания: на запрос `/starship` без
+ * завершающего слэша контейнер отвечает редиректом, а спецификация описывает
+ * именно такой путь. WAR разворачивается в корень, префикс сопоставляет Spring.
+ * Литеральные сегменты вроде `create` Spring сопоставляет раньше шаблонов `{id}`.
  */
 @RestController
+@RequestMapping("/starship")
 class StarshipController(
     private val service: StarshipService,
     private val queryParser: StarshipQueryParser,

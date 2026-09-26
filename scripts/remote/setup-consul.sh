@@ -32,6 +32,8 @@ else
   mkdir -p "$OPT/bin"
   cp "$TMP/usr/local/bin/consul" "$OPT/bin/consul"
   chmod 755 "$OPT/bin/consul"
+  # Отладочные символы занимают треть бинаря, а места на helios нет.
+  strip "$OPT/bin/consul" 2>/dev/null || true
 fi
 
 # Слушаем только петлю: наружу helios высокие порты всё равно не пускает,
@@ -48,6 +50,12 @@ client_addr      = "127.0.0.1"
 
 ui_config {
   enabled = true
+}
+
+# WAL по умолчанию резервирует 64 МБ файлами сегментов, а квота на helios — 1 ГиБ.
+# boltdb для одного узла с десятком сервисов достаточно и занимает килобайты.
+raft_logstore {
+  backend = "boltdb"
 }
 
 ports {
