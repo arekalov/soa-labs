@@ -1,12 +1,14 @@
 /** Все тексты интерфейса — в одном месте. */
 export const S = {
   app: {
-    title: 'СОА · Лабораторная №2',
-    variant: 'вариант 73126',
+    title: 'СОА · Лабораторная №3',
+    variant: 'вариант 9987654',
     services: 'Сервисы',
     check: 'проверить',
     spaceMarine: 'SpaceMarine',
     starship: 'Starship',
+    consul: 'Consul',
+    haproxy: 'HAProxy',
   },
   nav: {
     marines: 'Десантники',

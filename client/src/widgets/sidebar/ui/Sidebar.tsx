@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { pingSpaceMarineService } from '@/entities/space-marine';
 import { pingStarshipService } from '@/entities/starship';
 import { ThemeToggle } from '@/features/theme-toggle';
+import { CONSUL_UI, HAPROXY_STATS } from '@/shared/api';
 import { S } from '@/shared/config';
 
 export type PageKey = 'marines' | 'extras' | 'starships';
@@ -71,6 +72,14 @@ export function Sidebar({ active, onNavigate }: { active: PageKey; onNavigate: (
         </div>
         <div className="flex items-center gap-2 py-0.5">
           <StatusDot status={starship} /> {S.app.starship}
+        </div>
+        <div className="mt-2 flex gap-3">
+          <a className="link link-hover" href={CONSUL_UI} target="_blank" rel="noreferrer">
+            {S.app.consul} ↗
+          </a>
+          <a className="link link-hover" href={HAPROXY_STATS} target="_blank" rel="noreferrer">
+            {S.app.haproxy} ↗
+          </a>
         </div>
       </div>
     </aside>
