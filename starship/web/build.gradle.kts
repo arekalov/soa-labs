@@ -9,6 +9,13 @@ plugins {
 }
 
 dependencies {
+    // WildFly JBossWS supplies the provider and CXF; never bundle a second stack.
+    compileOnly("org.apache.cxf:cxf-rt-frontend-jaxws:4.0.10")
+    compileOnly("org.apache.cxf:cxf-rt-transports-http:4.0.10")
+    compileOnly(project(":soap-contract"))
+    compileOnly("jakarta.xml.ws:jakarta.xml.ws-api:4.0.2")
+    compileOnly("jakarta.jws:jakarta.jws-api:3.0.0")
+    compileOnly("jakarta.xml.bind:jakarta.xml.bind-api:4.0.2")
     // Встроенный Tomcat исключаем: сервлет-контейнер даёт WildFly.
     implementation("org.springframework.boot:spring-boot-starter-web") {
         exclude(group = "org.apache.tomcat.embed")

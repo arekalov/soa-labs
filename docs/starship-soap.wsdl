@@ -1,0 +1,389 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wsdl:definitions xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:tns="urn:soa:starship:v1" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:ns1="http://schemas.xmlsoap.org/soap/http" name="StarshipService" targetNamespace="urn:soa:starship:v1">
+  <wsdl:types>
+    <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:tns="urn:soa:starship:v1" attributeFormDefault="unqualified" elementFormDefault="qualified" targetNamespace="urn:soa:starship:v1" version="1.0">
+      <xs:element name="board" type="tns:board"/>
+      <xs:element name="boardResponse" type="tns:boardResponse"/>
+      <xs:element name="create" type="tns:create"/>
+      <xs:element name="createResponse" type="tns:createResponse"/>
+      <xs:element name="createWithId" type="tns:createWithId"/>
+      <xs:element name="createWithIdResponse" type="tns:createWithIdResponse"/>
+      <xs:element name="delete" type="tns:delete"/>
+      <xs:element name="deleteResponse" type="tns:deleteResponse"/>
+      <xs:element name="getById" type="tns:getById"/>
+      <xs:element name="getByIdResponse" type="tns:getByIdResponse"/>
+      <xs:element name="list" type="tns:list"/>
+      <xs:element name="listResponse" type="tns:listResponse"/>
+      <xs:element name="rename" type="tns:rename"/>
+      <xs:element name="renameResponse" type="tns:renameResponse"/>
+      <xs:element name="unload" type="tns:unload"/>
+      <xs:element name="unloadResponse" type="tns:unloadResponse"/>
+      <xs:complexType name="board">
+        <xs:sequence>
+          <xs:element name="starshipId" type="xs:long"/>
+          <xs:element name="spaceMarineId" type="xs:int"/>
+        </xs:sequence>
+      </xs:complexType>
+      <xs:complexType name="boardResponse">
+        <xs:sequence>
+          <xs:element minOccurs="0" name="result" type="tns:Ship"/>
+        </xs:sequence>
+      </xs:complexType>
+      <xs:complexType name="Ship">
+        <xs:sequence>
+          <xs:element name="id" type="xs:long"/>
+          <xs:element minOccurs="0" name="name" type="xs:string"/>
+          <xs:element maxOccurs="unbounded" minOccurs="0" name="marines" nillable="true" type="xs:int"/>
+        </xs:sequence>
+      </xs:complexType>
+      <xs:complexType name="FaultDetail">
+        <xs:sequence>
+          <xs:element name="status" type="xs:int"/>
+          <xs:element minOccurs="0" name="code" type="xs:string"/>
+          <xs:element minOccurs="0" name="message" type="xs:string"/>
+          <xs:element maxOccurs="unbounded" minOccurs="0" name="details" nillable="true" type="xs:string"/>
+        </xs:sequence>
+      </xs:complexType>
+      <xs:complexType name="createWithId">
+        <xs:sequence>
+          <xs:element name="id" type="xs:long"/>
+          <xs:element minOccurs="0" name="name" type="xs:string"/>
+        </xs:sequence>
+      </xs:complexType>
+      <xs:complexType name="createWithIdResponse">
+        <xs:sequence>
+          <xs:element minOccurs="0" name="result" type="tns:Ship"/>
+        </xs:sequence>
+      </xs:complexType>
+      <xs:complexType name="delete">
+        <xs:sequence>
+          <xs:element name="id" type="xs:long"/>
+        </xs:sequence>
+      </xs:complexType>
+      <xs:complexType name="deleteResponse">
+        <xs:sequence/>
+      </xs:complexType>
+      <xs:complexType name="list">
+        <xs:sequence>
+          <xs:element minOccurs="0" name="query" type="tns:ShipQuery"/>
+        </xs:sequence>
+      </xs:complexType>
+      <xs:complexType name="ShipQuery">
+        <xs:sequence>
+          <xs:element minOccurs="0" name="id" type="xs:long"/>
+          <xs:element minOccurs="0" name="name" type="xs:string"/>
+          <xs:element maxOccurs="unbounded" minOccurs="0" name="sort" nillable="true" type="tns:ShipSort"/>
+          <xs:element name="page" type="xs:int"/>
+          <xs:element name="size" type="xs:int"/>
+        </xs:sequence>
+      </xs:complexType>
+      <xs:complexType name="ShipSort">
+        <xs:sequence>
+          <xs:element minOccurs="0" name="field" type="tns:sortField"/>
+          <xs:element name="descending" type="xs:boolean"/>
+        </xs:sequence>
+      </xs:complexType>
+      <xs:complexType name="listResponse">
+        <xs:sequence>
+          <xs:element minOccurs="0" name="result" type="tns:ShipPage"/>
+        </xs:sequence>
+      </xs:complexType>
+      <xs:complexType name="ShipPage">
+        <xs:sequence>
+          <xs:element maxOccurs="unbounded" minOccurs="0" name="items" nillable="true" type="tns:Ship"/>
+          <xs:element name="page" type="xs:int"/>
+          <xs:element name="size" type="xs:int"/>
+          <xs:element name="totalElements" type="xs:long"/>
+          <xs:element name="totalPages" type="xs:int"/>
+        </xs:sequence>
+      </xs:complexType>
+      <xs:complexType name="create">
+        <xs:sequence>
+          <xs:element minOccurs="0" name="name" type="xs:string"/>
+        </xs:sequence>
+      </xs:complexType>
+      <xs:complexType name="createResponse">
+        <xs:sequence>
+          <xs:element minOccurs="0" name="result" type="tns:Ship"/>
+        </xs:sequence>
+      </xs:complexType>
+      <xs:complexType name="unload">
+        <xs:sequence>
+          <xs:element name="starshipId" type="xs:long"/>
+          <xs:element name="spaceMarineId" type="xs:int"/>
+        </xs:sequence>
+      </xs:complexType>
+      <xs:complexType name="unloadResponse">
+        <xs:sequence>
+          <xs:element minOccurs="0" name="result" type="tns:Ship"/>
+        </xs:sequence>
+      </xs:complexType>
+      <xs:complexType name="getById">
+        <xs:sequence>
+          <xs:element name="id" type="xs:long"/>
+        </xs:sequence>
+      </xs:complexType>
+      <xs:complexType name="getByIdResponse">
+        <xs:sequence>
+          <xs:element minOccurs="0" name="result" type="tns:Ship"/>
+        </xs:sequence>
+      </xs:complexType>
+      <xs:complexType name="rename">
+        <xs:sequence>
+          <xs:element name="id" type="xs:long"/>
+          <xs:element minOccurs="0" name="name" type="xs:string"/>
+        </xs:sequence>
+      </xs:complexType>
+      <xs:complexType name="renameResponse">
+        <xs:sequence>
+          <xs:element minOccurs="0" name="result" type="tns:Ship"/>
+        </xs:sequence>
+      </xs:complexType>
+      <xs:simpleType name="sortField">
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="ID"/>
+          <xs:enumeration value="NAME"/>
+        </xs:restriction>
+      </xs:simpleType>
+      <xs:element name="StarshipFault" nillable="true" type="tns:FaultDetail"/>
+    </xs:schema>
+  </wsdl:types>
+  <wsdl:message name="boardResponse">
+    <wsdl:part element="tns:boardResponse" name="parameters">
+    </wsdl:part>
+  </wsdl:message>
+  <wsdl:message name="board">
+    <wsdl:part element="tns:board" name="parameters">
+    </wsdl:part>
+  </wsdl:message>
+  <wsdl:message name="createWithId">
+    <wsdl:part element="tns:createWithId" name="parameters">
+    </wsdl:part>
+  </wsdl:message>
+  <wsdl:message name="create">
+    <wsdl:part element="tns:create" name="parameters">
+    </wsdl:part>
+  </wsdl:message>
+  <wsdl:message name="unload">
+    <wsdl:part element="tns:unload" name="parameters">
+    </wsdl:part>
+  </wsdl:message>
+  <wsdl:message name="StarshipFault">
+    <wsdl:part element="tns:StarshipFault" name="StarshipFault">
+    </wsdl:part>
+  </wsdl:message>
+  <wsdl:message name="renameResponse">
+    <wsdl:part element="tns:renameResponse" name="parameters">
+    </wsdl:part>
+  </wsdl:message>
+  <wsdl:message name="deleteResponse">
+    <wsdl:part element="tns:deleteResponse" name="parameters">
+    </wsdl:part>
+  </wsdl:message>
+  <wsdl:message name="getById">
+    <wsdl:part element="tns:getById" name="parameters">
+    </wsdl:part>
+  </wsdl:message>
+  <wsdl:message name="rename">
+    <wsdl:part element="tns:rename" name="parameters">
+    </wsdl:part>
+  </wsdl:message>
+  <wsdl:message name="createWithIdResponse">
+    <wsdl:part element="tns:createWithIdResponse" name="parameters">
+    </wsdl:part>
+  </wsdl:message>
+  <wsdl:message name="listResponse">
+    <wsdl:part element="tns:listResponse" name="parameters">
+    </wsdl:part>
+  </wsdl:message>
+  <wsdl:message name="delete">
+    <wsdl:part element="tns:delete" name="parameters">
+    </wsdl:part>
+  </wsdl:message>
+  <wsdl:message name="list">
+    <wsdl:part element="tns:list" name="parameters">
+    </wsdl:part>
+  </wsdl:message>
+  <wsdl:message name="createResponse">
+    <wsdl:part element="tns:createResponse" name="parameters">
+    </wsdl:part>
+  </wsdl:message>
+  <wsdl:message name="unloadResponse">
+    <wsdl:part element="tns:unloadResponse" name="parameters">
+    </wsdl:part>
+  </wsdl:message>
+  <wsdl:message name="getByIdResponse">
+    <wsdl:part element="tns:getByIdResponse" name="parameters">
+    </wsdl:part>
+  </wsdl:message>
+  <wsdl:portType name="StarshipPort">
+    <wsdl:operation name="board">
+      <wsdl:input message="tns:board" name="board">
+    </wsdl:input>
+      <wsdl:output message="tns:boardResponse" name="boardResponse">
+    </wsdl:output>
+      <wsdl:fault message="tns:StarshipFault" name="StarshipFault">
+    </wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="createWithId">
+      <wsdl:input message="tns:createWithId" name="createWithId">
+    </wsdl:input>
+      <wsdl:output message="tns:createWithIdResponse" name="createWithIdResponse">
+    </wsdl:output>
+      <wsdl:fault message="tns:StarshipFault" name="StarshipFault">
+    </wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="delete">
+      <wsdl:input message="tns:delete" name="delete">
+    </wsdl:input>
+      <wsdl:output message="tns:deleteResponse" name="deleteResponse">
+    </wsdl:output>
+      <wsdl:fault message="tns:StarshipFault" name="StarshipFault">
+    </wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="list">
+      <wsdl:input message="tns:list" name="list">
+    </wsdl:input>
+      <wsdl:output message="tns:listResponse" name="listResponse">
+    </wsdl:output>
+      <wsdl:fault message="tns:StarshipFault" name="StarshipFault">
+    </wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="create">
+      <wsdl:input message="tns:create" name="create">
+    </wsdl:input>
+      <wsdl:output message="tns:createResponse" name="createResponse">
+    </wsdl:output>
+      <wsdl:fault message="tns:StarshipFault" name="StarshipFault">
+    </wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="unload">
+      <wsdl:input message="tns:unload" name="unload">
+    </wsdl:input>
+      <wsdl:output message="tns:unloadResponse" name="unloadResponse">
+    </wsdl:output>
+      <wsdl:fault message="tns:StarshipFault" name="StarshipFault">
+    </wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="getById">
+      <wsdl:input message="tns:getById" name="getById">
+    </wsdl:input>
+      <wsdl:output message="tns:getByIdResponse" name="getByIdResponse">
+    </wsdl:output>
+      <wsdl:fault message="tns:StarshipFault" name="StarshipFault">
+    </wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="rename">
+      <wsdl:input message="tns:rename" name="rename">
+    </wsdl:input>
+      <wsdl:output message="tns:renameResponse" name="renameResponse">
+    </wsdl:output>
+      <wsdl:fault message="tns:StarshipFault" name="StarshipFault">
+    </wsdl:fault>
+    </wsdl:operation>
+  </wsdl:portType>
+  <wsdl:binding name="StarshipServiceSoapBinding" type="tns:StarshipPort">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <wsdl:operation name="board">
+      <soap:operation soapAction="" style="document"/>
+      <wsdl:input name="board">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="boardResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+      <wsdl:fault name="StarshipFault">
+        <soap:fault name="StarshipFault" use="literal"/>
+      </wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="createWithId">
+      <soap:operation soapAction="" style="document"/>
+      <wsdl:input name="createWithId">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="createWithIdResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+      <wsdl:fault name="StarshipFault">
+        <soap:fault name="StarshipFault" use="literal"/>
+      </wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="delete">
+      <soap:operation soapAction="" style="document"/>
+      <wsdl:input name="delete">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="deleteResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+      <wsdl:fault name="StarshipFault">
+        <soap:fault name="StarshipFault" use="literal"/>
+      </wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="list">
+      <soap:operation soapAction="" style="document"/>
+      <wsdl:input name="list">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="listResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+      <wsdl:fault name="StarshipFault">
+        <soap:fault name="StarshipFault" use="literal"/>
+      </wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="create">
+      <soap:operation soapAction="" style="document"/>
+      <wsdl:input name="create">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="createResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+      <wsdl:fault name="StarshipFault">
+        <soap:fault name="StarshipFault" use="literal"/>
+      </wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="unload">
+      <soap:operation soapAction="" style="document"/>
+      <wsdl:input name="unload">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="unloadResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+      <wsdl:fault name="StarshipFault">
+        <soap:fault name="StarshipFault" use="literal"/>
+      </wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="getById">
+      <soap:operation soapAction="" style="document"/>
+      <wsdl:input name="getById">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="getByIdResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+      <wsdl:fault name="StarshipFault">
+        <soap:fault name="StarshipFault" use="literal"/>
+      </wsdl:fault>
+    </wsdl:operation>
+    <wsdl:operation name="rename">
+      <soap:operation soapAction="" style="document"/>
+      <wsdl:input name="rename">
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output name="renameResponse">
+        <soap:body use="literal"/>
+      </wsdl:output>
+      <wsdl:fault name="StarshipFault">
+        <soap:fault name="StarshipFault" use="literal"/>
+      </wsdl:fault>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:service name="StarshipService">
+    <wsdl:port binding="tns:StarshipServiceSoapBinding" name="StarshipPort">
+      <soap:address location="https://localhost:27343/starship-soap/StarshipService"/>
+    </wsdl:port>
+  </wsdl:service>
+</wsdl:definitions>

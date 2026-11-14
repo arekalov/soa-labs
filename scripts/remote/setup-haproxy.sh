@@ -63,8 +63,9 @@ frontend starship
 
 backend starship_nodes
     balance roundrobin
-    option httpchk GET /starship?size=1
+    option httpchk GET /starship-soap/StarshipService?wsdl
     http-check expect status 200
+    timeout check 5s
     server node1 127.0.0.1:$NODE1_PORT check ssl verify none
     server node2 127.0.0.1:$NODE2_PORT check ssl verify none
 

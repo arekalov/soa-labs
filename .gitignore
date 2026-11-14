@@ -12,6 +12,7 @@ deploy.env
 
 # Сборка
 build/
+target/
 .gradle/
 .kotlin/
 node_modules/

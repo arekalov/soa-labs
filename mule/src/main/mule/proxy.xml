@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:http="http://www.mulesoft.org/schema/mule/http"
+      xmlns:tls="http://www.mulesoft.org/schema/mule/tls"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+        http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+        http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd">
+  <http:listener-config name="loopback">
+    <http:listener-connection host="127.0.0.1" port="27780"/>
+  </http:listener-config>
+  <http:request-config name="spacemarine">
+    <http:request-connection protocol="HTTPS" host="127.0.0.1" port="27443"
+                             maxConnections="2" connectionIdleTimeout="10000">
+      <tls:context>
+        <tls:trust-store path="${SOA_TRUSTSTORE_PATH}" password="${SOA_TRUSTSTORE_PASSWORD}" type="pkcs12"/>
+      </tls:context>
+    </http:request-connection>
+  </http:request-config>
+  <flow name="health" maxConcurrency="1">
+    <http:listener config-ref="loopback" path="/health" allowedMethods="GET"/>
+    <set-payload value="ok" mimeType="text/plain"/>
+    <logger level="INFO" message="MULE_PROXY method=GET path=/health status=200 upstream=local"/>
+  </flow>
+  <flow name="space-marine-proxy" maxConcurrency="2">
+    <http:listener config-ref="loopback" path="/space-marines/{id}" allowedMethods="GET">
+      <http:response statusCode="#[attributes.statusCode default 200]"/>
+      <http:error-response statusCode="502">
+        <http:body>upstream unavailable</http:body>
+      </http:error-response>
+    </http:listener>
+    <set-variable variableName="requestPath" value="#[attributes.requestPath]"/>
+    <http:request config-ref="spacemarine" method="GET" path="#[vars.requestPath]"
+                  responseTimeout="5000" followRedirects="false" sendBodyMode="NEVER">
+      <http:headers>#[{'Accept': 'application/json'}]</http:headers>
+      <http:response-validator>
+        <http:success-status-code-validator values="100..599"/>
+      </http:response-validator>
+    </http:request>
+    <logger level="INFO" message="#[ 'MULE_PROXY method=GET path=' ++ vars.requestPath ++ ' status=' ++ (attributes.statusCode as String) ++ ' upstream=https://127.0.0.1:27443' ]"/>
+    <error-handler>
+      <on-error-propagate logException="false">
+        <logger level="WARN" message="#[ 'MULE_PROXY method=GET path=' ++ vars.requestPath ++ ' status=502 upstream=https://127.0.0.1:27443 error=' ++ (error.errorType.identifier as String) ]"/>
+      </on-error-propagate>
+    </error-handler>
+  </flow>
+</mule>

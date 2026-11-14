@@ -6,6 +6,7 @@ dependencies {
     deploy(project(":starship:ejb")) { isTransitive = false }
     deploy(project(path = ":starship:web", configuration = "earModule"))
     earlib(project(":soa-api"))
+    earlib(project(":soap-contract"))
 }
 
 tasks.ear {

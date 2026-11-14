@@ -16,7 +16,7 @@ class ConsulRegistration {
         name = System.getProperty("soa.service.name", "starship"),
         host = System.getProperty("soa.service.host", "helios.cs.ifmo.ru"),
         port = System.getProperty("soa.service.port", "27543").toInt(),
-        healthPath = "/starship?size=1",
+        healthPath = "/starship-soap/StarshipService?wsdl",
     )
 
     @PostConstruct

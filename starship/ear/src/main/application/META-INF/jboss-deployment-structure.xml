@@ -8,12 +8,21 @@
   jaxrs и weld подхватили бы аннотации Spring MVC и его бины.
 -->
 <jboss-deployment-structure>
+    <deployment>
+        <dependencies>
+            <module name="jakarta.xml.ws.api" export="true"/>
+            <module name="jakarta.xml.bind.api" export="true"/>
+        </dependencies>
+    </deployment>
     <sub-deployment name="starship-web.war">
+        <dependencies>
+            <module name="org.apache.cxf"/>
+            <module name="org.apache.cxf.impl" services="import"/>
+        </dependencies>
         <exclude-subsystems>
             <subsystem name="logging"/>
             <subsystem name="jaxrs"/>
             <subsystem name="weld"/>
-            <subsystem name="webservices"/>
         </exclude-subsystems>
     </sub-deployment>
 </jboss-deployment-structure>

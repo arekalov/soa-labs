@@ -1,0 +1,6 @@
+{
+  "minMuleVersion": "4.11.0",
+  "requiredProduct": "MULE",
+  "javaSpecificationVersions": ["17"],
+  "configs": ["proxy.xml"]
+}
