@@ -39,7 +39,7 @@ class GlobalExceptionHandler {
             400, 404, 409, 422, 500, 503 -> HttpStatus.valueOf(fault.status)
             else -> HttpStatus.INTERNAL_SERVER_ERROR
         }
-        return error(status, fault.message, fault.details.takeIf { it.isNotEmpty() })
+        return error(status, fault.message ?: Messages.INTERNAL_ERROR, fault.details.takeIf { it.isNotEmpty() })
     }
 
     @ExceptionHandler(ru.ifmo.soa.starship.soap.SoapTransportException::class)

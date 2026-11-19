@@ -37,3 +37,8 @@ dependencies {
 tasks.jar {
     archiveFileName.set("starship-ejb.jar")
 }
+
+tasks.test {
+    inputs.file(rootProject.file("docs/starship-soap.wsdl"))
+    systemProperty("starship.referenceWsdl", rootProject.file("docs/starship-soap.wsdl").absolutePath)
+}

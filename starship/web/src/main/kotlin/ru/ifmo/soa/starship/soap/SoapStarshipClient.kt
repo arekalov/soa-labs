@@ -72,4 +72,4 @@ class SoapStarshipClient(
     }
 }
 
-private fun Ship.toDto() = StarshipDto(id, name, marines.toList())
+private fun Ship.toDto() = StarshipDto(id, requireNotNull(name), marines.toList())

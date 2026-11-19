@@ -69,6 +69,10 @@ REST и SOAP используют разные worker-пулы, иначе си�
 
 `soap-contract` содержит JAX-WS интерфейс `StarshipPort`, JAXB DTO и checked `StarshipFault`. WSDL генерирует JBossWS/CXF на WildFly. Протокол SOAP 1.1, document/literal wrapped, namespace `urn:soa:starship:v1`.
 
+SOAP-контракт, endpoint и тесты написаны на Kotlin. `@Throws(StarshipFault::class)` сохраняет объявление типизированной ошибки в JVM-сигнатурах. Пространства имён заданы явно в JAXB/JAX-WS аннотациях; Java `package-info.java` не используется. JAXB DTO открыты (`open`), чтобы не добавлять ограничения `final` в XSD, а начальные коллекции изменяемы для XML-десериализации. Контрактный тест сравнивает сформированный WSDL с сохранённым снимком, учитывая пространства имён и порядок XML-полей, но не префиксы и адрес тестового сервера.
+
+Схемы взаимодействия и объяснение роли Mule: [README-LAB4-INTERACTION.md](README-LAB4-INTERACTION.md).
+
 Операции: `list`, `getById`, `create`, `createWithId`, `rename`, `delete`, `board`, `unload`. DTO представлены XML-типами, а не JSON-строками внутри SOAP. Fault detail содержит `status`, `code`, `message`, `details`; REST-прослойка переводит его в прежние HTTP-коды и JSON ошибок.
 
 Прослойка оставляет только транспортную адаптацию: URL/JSON → SOAP DTO, SOAP DTO → JSON, статус создания/удаления и представление ошибок. Проверка существования корабля, уникальности, состава экипажа и работа с БД остаются в EJB.
