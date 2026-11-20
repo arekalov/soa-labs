@@ -32,18 +32,8 @@ import java.util.logging.Logger
  */
 @RestControllerAdvice
 class GlobalExceptionHandler {
-    @ExceptionHandler(ru.ifmo.soa.starship.soap.StarshipFault::class)
-    fun onSoapFault(e: ru.ifmo.soa.starship.soap.StarshipFault): ResponseEntity<ErrorDto> {
-        val fault = e.faultInfo
-        val status = when (fault.status) {
-            400, 404, 409, 422, 500, 503 -> HttpStatus.valueOf(fault.status)
-            else -> HttpStatus.INTERNAL_SERVER_ERROR
-        }
-        return error(status, fault.message ?: Messages.INTERNAL_ERROR, fault.details.takeIf { it.isNotEmpty() })
-    }
-
-    @ExceptionHandler(ru.ifmo.soa.starship.soap.SoapTransportException::class)
-    fun onSoapUnavailable(e: ru.ifmo.soa.starship.soap.SoapTransportException) =
+    @ExceptionHandler(ru.ifmo.soa.starship.client.MuleUnavailableException::class)
+    fun onMuleUnavailable(e: ru.ifmo.soa.starship.client.MuleUnavailableException) =
         error(HttpStatus.SERVICE_UNAVAILABLE, requireNotNull(e.message))
 
     private val log: Logger = Logger.getLogger(GlobalExceptionHandler::class.java.name)

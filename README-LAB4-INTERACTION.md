@@ -1,63 +1,78 @@
 # ЛР4: взаимодействие сервисов и Mule
 
-## Отдельные изображения
-
-- Диаграмма последовательности (модули сверху и снизу, стрелки запросов и ответов): [PNG](docs/lab4-sequence.png), [SVG](docs/lab4-sequence.svg).
-
-- Общая схема компонентов: [PNG](docs/lab4-components.png), [SVG](docs/lab4-components.svg).
-- Диаграмма действий при посадке десантника: [PNG](docs/lab4-activity.png), [SVG](docs/lab4-activity.svg).
-
-Исходники Graphviz находятся в `docs/diagrams/`. PNG удобны для просмотра и вставки в отчёт; SVG масштабируются без потери качества.
-
-## Схема взаимодействия
-
-HAProxy и SSH-туннель опущены: здесь показаны программные компоненты и протоколы между ними.
-
-```mermaid
-flowchart LR
-    A["Браузер"] -->|"REST / JSON"| B["REST-прослойка: starship/web"]
-    B -->|"HTTPS / SOAP XML"| M["Mule ESB :27781"]
-    M -->|"HTTPS / SOAP XML"| C["StarshipEndpoint"]
-    C -->|"вызов через EJB-контейнер"| D["StarshipBean"]
-    D -->|"HTTP GET"| E["Mule ESB :27780"]
-    E -->|"HTTPS GET"| F["SpaceMarine REST API :27443"]
-```
-
-StarshipEndpoint и StarshipBean — два EJB в одном WildFly. Первый адаптирует SOAP-запросы и ошибки, второй выполняет бизнес-правила и работает с данными. REST-прослойка вызывает SOAP по HTTPS через Mule, хотя размещена в том же приложении. Два блока Mule на схемах — один runtime с отдельными flows.
-
-## Для чего нужен Mule
-
-Mule — интеграционная платформа. В этой лабораторной её flow принимает запрос Starship, направляет его в SpaceMarine, устанавливает HTTPS-соединение с проверкой сертификата, ограничивает параллелизм, журналирует результат и обрабатывает транспортные ошибки.
-
-Starship знает адрес Mule, а адрес SpaceMarine задан в конфигурации шины. Бизнес-смысл ответа определяет Starship: 200 означает существование десантника, 404 — отсутствие. Прямого обходного маршрута при отказе Mule нет.
-
-REST → SOAP выполняет `starship/web` (CXF), а каждый сетевой SOAP-вызов проходит через Mule :27781. Шина сохраняет XML, Content-Type, SOAPAction, HTTP-статус и SOAP Fault. Два фиксированных маршрута выбирают SOAP listener нужной реплики; произвольного upstream из пользовательского ввода нет. При отказе Mule прямого fallback к SOAP нет: REST возвращает 503. Для SOAP upstream задан таймаут 25 секунд, у CXF — 30 секунд; автоматических повторов изменений нет.
-
-Текущий flow использует небольшую часть возможностей Mule: HTTP-маршрутизацию и транспортную обработку. Очередей, преобразования SOAP в REST и оркестрации многошагового бизнес-процесса в нём нет. Для одного такого маршрута вне требований лабораторной внедрение целой ESB могло бы быть избыточным.
-
-## Схема обработки запроса в Mule
+## Компоненты
 
 ```mermaid
 flowchart TD
-    A["GET /space-marines/12"] --> B["Listener принимает запрос на :27780"]
-    B --> C["Сохранить vars.requestPath"]
-    C --> D["HTTP Request: HTTPS :27443/space-marines/12"]
-    D --> E{"Результат обращения"}
-    E -->|"Получен HTTP-ответ, включая 404/500"| F["payload и attributes заменяются ответом"]
-    F --> G["INFO-лог"]
-    G --> H["Вернуть Starship тело и HTTP-статус SpaceMarine"]
-    E -->|"Ошибка соединения, TLS или таймаут"| I["WARN-лог в on-error-propagate"]
-    I --> J["Listener возвращает 502: upstream unavailable"]
+    UI["React-клиент"] --> HA["HAProxy :27343"]
+    HA --> R1["Starship REST-прослойка :27543"]
+    HA --> R2["Starship REST-прослойка :27643"]
+    R1 -->|"JSON / HTTPS"| M
+    R2 -->|"JSON / HTTPS"| M
+    M["Mule :27781 — DataWeave JSON ↔ SOAP"] -->|"SOAP / HTTPS"| S1["Starship SOAP :27544"]
+    M -->|"SOAP / HTTPS"| S2["Starship SOAP :27644"]
+    S1 --> B1["StarshipBean — реплика 1"]
+    S2 --> B2["StarshipBean — реплика 2"]
+    B1 -->|"HTTP GET"| MR["Тот же Mule :27780 — SpaceMarine proxy"]
+    B2 -->|"HTTP GET"| MR
+    MR -->|"HTTPS GET"| SM["SpaceMarine :27443"]
+    B1 --> DB[(PostgreSQL)]
+    B2 --> DB
+    SM --> DB
+    UI -->|"Операции с десантниками"| SM
 ```
 
-Настройка `success-status-code-validator values="100..599"` сохраняет ответы SpaceMarine как результаты HTTP-обмена. Она не превращает 404 в бизнес-успех. Транспортный сбой обрабатывается отдельно.
+## Классы при посадке десантника
 
-Starship превращает недоступность зависимости в SOAP Fault, а REST-прослойка — в HTTP 503. При выключенном Mule Starship получает ошибку соединения напрямую, также приводящую к 503. Таймаут чтения Starship и ожидания ответа Mule сейчас равны 5 секундам, поэтому при медленном upstream Starship может прекратить ожидание до получения 502.
+Успешный сценарий `POST /starship/54/board/12`. Стрелки внутри репозитория ниже показывают порядок выполнения; результаты вызовов возвращаются вызывающему бизнес-компоненту.
 
-## Исходники
+```mermaid
+flowchart TD
+    UI["Клиент → HAProxy"] --> C["StarshipController.board(54, 12)"]
+    C --> J["MuleStarshipClient.call(board, параметры)"]
+    J -->|"HTTPS POST /starship-N/operations/board; JSON"| M["Mule: starship-N-json-to-soap"]
+    M --> DW["DataWeave request.dwl: JSON → SOAP Envelope"]
+    DW --> HTTP["HTTP Connector: POST SOAP XML"]
+    HTTP --> EP["StarshipEndpoint.board(54, 12)"]
+    EP -->|"EJB"| BEAN["StarshipBean.board(54, 12)"]
+    BEAN --> FIND["StarshipRepository.findById(54)"]
+    FIND --> CHECK["StarshipRepository.findFirstByMarine(12)"]
+    CHECK --> CLIENT["SpaceMarineClient.exists(12)"]
+    CLIENT -->|"HTTP GET"| MP["Mule: space-marine-proxy"]
+    MP -->|"HTTPS GET"| MC["SpaceMarineController.getById(12)"]
+    MC --> MB["SpaceMarineBean.getById(12)"]
+    MB --> MR["SpaceMarineRepository.findById(12) → БД"]
+    MR -.->|"HTTP 200 обратно через Bean, Controller и Mule; exists = true"| SAVE["StarshipBean: добавить ID; StarshipRepository.save"]
+    SAVE --> OUT["StarshipEndpoint: DTO → SOAP Ship; сервер формирует XML"]
+    OUT --> RESPONSE["Mule response.dwl: SOAP XML / Fault → JSON + статус"]
+    RESPONSE --> RETURN["MuleStarshipClient → StarshipController → HAProxy → клиент"]
+```
 
-- [SOAP-контракт на Kotlin](soap-contract/src/main/kotlin/ru/ifmo/soa/starship/soap/StarshipPort.kt)
-- [SOAP endpoint](starship/ejb/src/main/kotlin/ru/ifmo/soa/starship/soap/StarshipEndpoint.kt)
-- [Бизнес-компонент](starship/ejb/src/main/kotlin/ru/ifmo/soa/starship/service/StarshipBean.kt)
-- [Клиент Mule](starship/ejb/src/main/kotlin/ru/ifmo/soa/starship/client/SpaceMarineClient.kt)
-- [Flow Mule](mule/src/main/mule/proxy.xml)
+## Что преобразует Mule
+
+REST-прослойка сохраняет прежние URL и проверяет формат HTTP-параметров. Она передаёт операцию и JSON в Mule, а ответ (JSON-байты и статус) возвращает клиенту без SOAP-типов. `SoapStarshipClient` удалён; клиентских зависимостей CXF/JAX-WS в `starship/web` нет. Сервер SOAP на WildFly по-прежнему использует JBossWS/CXF.
+
+Шина выполняет:
+
+1. Принимает JSON по `POST https://localhost:27781/starship-N/operations/{operation}`.
+2. Проверяет операцию по списку восьми разрешённых операций.
+3. `transforms/request.dwl` создаёт SOAP 1.1 Envelope и типизированные XML-поля в namespace `urn:soa:starship:v1`; XML writer экранирует строки.
+4. HTTP Connector вызывает фиксированный SOAP listener своей реплики с TLS-проверкой. Автоматических прикладных повторов нет.
+5. `transforms/response.dwl` преобразует SOAP-ответ в JSON, включая массивы, числа, пагинацию и результат высадки. Назначает 201 при создании, 204 при удалении, 200 при остальных успешных операциях.
+6. Для SOAP Fault извлекает `detail/StarshipFault`, возвращает JSON ошибки и 400/404/409/422/500/503. Транспортные ошибки дают 503.
+
+Используется **DataWeave + HTTP Connector** на Mule Kernel, без Web Service Consumer и без Enterprise Transform Message. Скрипты подключены через `${file::transforms/...dwl}` в core Set Payload. WSDL описывает контракт, но не загружается шиной во время вызова: соответствие полей явно реализовано в DataWeave и проверяется интеграционными тестами.
+
+Mule отвечает за адаптацию протоколов; бизнес-правила и транзакции остаются в `StarshipBean`. Остановка Mule делает SOAP-зависимые REST-операции недоступными (503). Прямого fallback нет.
+
+## Настройки и исходники
+
+- `starship.mule.url=https://localhost:27781/starship-1/operations` (во втором узле — `starship-2`).
+- SOAP upstream: HTTPS 27544/27644; timeout 25 секунд. REST-прослойка ждёт Mule до 30 секунд.
+- SpaceMarine proxy: HTTP 27780 → HTTPS 27443. Отдельные flows допускают вложенный вызов при выполнении SOAP-операции.
+- [Конфигурация Mule](mule/src/main/mule/proxy.xml)
+- [JSON → SOAP](mule/src/main/resources/transforms/request.dwl)
+- [SOAP → JSON и ошибки](mule/src/main/resources/transforms/response.dwl)
+- [JSON-клиент REST-прослойки](starship/web/src/main/kotlin/ru/ifmo/soa/starship/client/MuleStarshipClient.kt)
+
+Источником актуальных схем служат Mermaid-блоки выше. Пользовательские `docs/sequence.png` и `docs/components.png` автоматически не перезаписываются.

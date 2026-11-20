@@ -10,7 +10,7 @@ digraph Components {
     ha [label="HAProxy :27343\nОбратный прокси · roundrobin", fillcolor="#dceaff"];
     subgraph cluster_s1 {
       label="WildFly · Starship 1"; labeljust=l; fontsize=18; style="rounded,filled"; fillcolor="#f4f8ff"; color="#c4d5ed";
-      r1 [label="REST-прослойка :27543\nStarshipController\nSoapStarshipClient"];
+      r1 [label="REST-прослойка :27543\nStarshipController\nMuleStarshipClient"];
       s1 [label="SOAP endpoint :27544\nStarshipEndpoint\nВнутренний HTTPS listener"];
       b1 [label="StarshipBean\nБизнес-логика", fillcolor="#dff4e9", color="#4b9671"];
 
@@ -18,15 +18,15 @@ digraph Components {
     }
     subgraph cluster_s2 {
       label="WildFly · Starship 2"; labeljust=l; fontsize=18; style="rounded,filled"; fillcolor="#f4f8ff"; color="#c4d5ed";
-      r2 [label="REST-прослойка :27643\nStarshipController\nSoapStarshipClient"];
+      r2 [label="REST-прослойка :27643\nStarshipController\nMuleStarshipClient"];
       s2 [label="SOAP endpoint :27644\nStarshipEndpoint\nВнутренний HTTPS listener"];
       b2 [label="StarshipBean\nБизнес-логика", fillcolor="#dff4e9", color="#4b9671"];
 
       s2 -> b2 [label="Вызов EJB"];
     }
-    soapmule [label="Mule ESB :27781\nHTTPS SOAP proxy\nМаршруты starship-1 и starship-2", fillcolor="#fff0d5", color="#bc8b34"];
-    r1 -> soapmule [label="SOAP XML"];
-    r2 -> soapmule [label="SOAP XML"];
+    soapmule [label="Mule ESB :27781\nDataWeave JSON ↔ SOAP\nМаршруты starship-1 и starship-2", fillcolor="#fff0d5", color="#bc8b34"];
+    r1 -> soapmule [label="HTTPS / JSON"];
+    r2 -> soapmule [label="HTTPS / JSON"];
     soapmule -> s1 [label="HTTPS :27544"];
     soapmule -> s2 [label="HTTPS :27644"];
     mule [label="Mule ESB :27780\nHTTP-маршрут /space-marines/{id}", fillcolor="#fff0d5", color="#bc8b34"];
@@ -52,6 +52,6 @@ digraph Components {
   b1 -> db [label="JPA · данные кораблей"];
   b2 -> db [label="JPA"];
   beansm -> db [label="JPA · данные десантников"];
-  note [shape=plain, fontsize=12, fontcolor="#596578", label="Два Starship — копии одного EAR с общей БД.\nREST → SOAP выполняет starship/web; Mule пересылает SOAP и связывает Starship с SpaceMarine.\nДва блока Mule обозначают один runtime с разными flows.\nВнутренние SOAP listener и Mule доступны на loopback.\nПубличный SOAP endpoint также доступен через внешние порты Starship и HAProxy.\nСплошные стрелки — вызовы / доступ к данным; пунктир — регистрации сервисов."];
+  note [shape=plain, fontsize=12, fontcolor="#596578", label="Два Starship — копии одного EAR с общей БД.\nJSON ↔ SOAP выполняет Mule; starship/web передаёт параметры и результат.\nДва блока Mule обозначают один runtime с разными flows.\nВнутренние SOAP listener и Mule доступны на loopback.\nПубличный SOAP endpoint также доступен через внешние порты Starship и HAProxy.\nСплошные стрелки — вызовы / доступ к данным; пунктир — регистрации сервисов."];
   db -> note [style=invis];
 }

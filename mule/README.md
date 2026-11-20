@@ -58,23 +58,24 @@ IP SAN `127.0.0.1` (текущий публичный `certs/spacemarine.crt` с
 * Маршрут SpaceMarine — узкий proxy текущего GET-клиента: не универсальный reverse proxy заголовков,
   cookies, query parameters или других HTTP методов.
 
-* `GET,POST https://localhost:27781/starship-1/StarshipService` → SOAP на `https://localhost:27544/starship-soap/StarshipService`.
-* `GET,POST https://localhost:27781/starship-2/StarshipService` → SOAP на `https://localhost:27644/starship-soap/StarshipService`.
-  SOAP XML, Content-Type, SOAPAction, query parameters и ответ сохраняются;
-  HTTP 500 с SOAP Fault передаётся клиенту без замены на generic 502.
-  Транспортная ошибка возвращает 502. Upstream timeout — 25 секунд.
-  Адрес назначения фиксирован конфигурацией, redirect и прикладные retry отсутствуют.
-  В stdout — `MULE_SOAP node=starship-1 method=POST status=200` (либо статус Fault).
+* `POST https://localhost:27781/starship-1/operations/{operation}` — JSON → SOAP upstream :27544.
+* `POST https://localhost:27781/starship-2/operations/{operation}` — JSON → SOAP upstream :27644.
+  Восемь операций: list, getById, create, createWithId, rename, delete, board, unload.
+  Преобразования реализованы в `src/main/resources/transforms/request.dwl` и `response.dwl`.
+  Core Set Payload загружает DataWeave через `${file::...}`; HTTP Connector отправляет
+  SOAP Envelope. Web Service Consumer и Enterprise-компоненты не требуются.
+  SOAP Fault превращается в JSON ErrorDto и соответствующий HTTP-статус;
+  транспортный сбой — 503. Ответ создаётся в Mule, REST-прослойка его передаёт.
+  В логах `MULE_ADAPTER node=starship-1 operation=board status=200`.
 
 ```text
-REST-прослойка → CXF → Mule HTTPS :27781 → SOAP endpoint → StarshipBean
-                                                           │
-                         SpaceMarine ← Mule HTTP :27780 ←───┘
+REST-прослойка → JSON → Mule :27781 → SOAP XML → StarshipEndpoint → StarshipBean
+                                                                │
+                          SpaceMarine ← Mule :27780 ←────────────┘
 ```
 
-Оба блока Mule — один runtime. У двух SOAP flows и SpaceMarine flow отдельные
-`maxConcurrency=2`, поэтому вложенное обращение к SpaceMarine не занимает слот
-того же SOAP flow. Полные схемы: [взаимодействие](../README-LAB4-INTERACTION.md).
+Оба блока Mule — один runtime. У JSON/SOAP flows и SpaceMarine flow отдельные
+лимиты `maxConcurrency=2`. Схемы: [взаимодействие](../README-LAB4-INTERACTION.md).
 
 ```bash
 curl -i http://127.0.0.1:27780/health
@@ -133,3 +134,16 @@ proxy возвращает 502. Записи `MULE_PROXY` с path/status под�
 Страница Kernel содержит уведомление о необходимом security fix, инструкция
 доступна после login. Этот фикс отдельно не проверялся; данный ZIP рассматривается
 как лабораторный runtime с loopback listener, а не актуальный production baseline.
+
+## Проверка преобразований без REST-прослойки
+
+После запуска `scripts/tunnel-lab4.sh` из корня репозитория:
+
+```bash
+python3 scripts/test-lab4-mule.py --node 1
+python3 scripts/test-lab4-mule.py --node 2
+```
+
+Каждый прогон проверяет JSON → SOAP → JSON, Unicode/XML-символы, пагинацию,
+SOAP Fault и формат ошибок `{code, message, details}`; удаляет свой тестовый корабль.
+Полный REST-контракт и успешные посадка/высадка проверяются `scripts/test-lab4.py`.

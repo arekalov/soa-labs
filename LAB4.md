@@ -26,66 +26,38 @@
 ## Архитектура
 
 ```text
-Клиент ── прежний REST/JSON ──► REST-прослойка
-                                     │ SOAP/XML через Mule :27781
-                                     ▼
-                             Starship + бизнес-логика
-                                     │ интеграционный вызов
-                                     ▼
-                                  Mule ESB
-                                     │ прежний REST API
-                                     ▼
-                                 SpaceMarine
+Клиент → HAProxy :27343 → REST-прослойка Starship
+                              │ HTTPS / JSON :27781
+                              ▼
+                     Mule: DataWeave JSON → SOAP
+                              │ HTTPS / SOAP :27544 или :27644
+                              ▼
+                     StarshipEndpoint → StarshipBean → БД
+                                              │ HTTP :27780
+                                              ▼
+                                  Mule → HTTPS :27443 → SpaceMarine
 ```
 
-Прямые запросы клиента к SpaceMarine сохраняются. HAProxy на 27343 распределяет запросы между REST-прослойками Starship. Каждая прослойка вызывает Mule по HTTPS :27781; маршрут `/starship-1/StarshipService` или `/starship-2/StarshipService` передаёт SOAP endpoint своего узла по отдельному внутреннему HTTPS listener. SOAP endpoint делегирует операции EJB `StarshipBean`; проверка существования десантника идёт через Mule, без прямого fallback к SpaceMarine.
-
-```text
-Browser ── HTTPS REST :27343 ── HAProxy
-                                  ├─ :27543 REST facade ── Mule :27781 ── HTTPS :27544 SOAP ── Starship EJB
-                                  └─ :27643 REST facade ── Mule :27781 ── HTTPS :27644 SOAP ── Starship EJB
-                                                                                │
-                                                                  HTTP 127.0.0.1:27780
-                                                                                ▼
-                                                                         Mule Kernel
-                                                                                │ HTTPS :27443
-                                                                                ▼
-Browser ─────────────────────────────── HTTPS :27443 ─────────────── SpaceMarine (без изменений)
-```
-
-REST и SOAP используют разные worker-пулы, иначе синхронные REST-запросы могли бы занять все потоки, необходимые вложенным SOAP-запросам. HTTP к Mule доступен только на loopback; внешний и upstream-трафик используют HTTPS с проверкой сертификата.
+Ответ SOAP, включая Fault, преобразуется в JSON и HTTP-статус в Mule.
+REST-прослойка использует `MuleStarshipClient` и не содержит SOAP-клиента/CXF.
+Схемы компонентов и классов: [README-LAB4-INTERACTION.md](README-LAB4-INTERACTION.md).
 
 | Компонент | Адрес / порт | Назначение |
 |---|---|---|
 | HAProxy | HTTPS 27343 | Прежняя точка входа клиента в Starship |
 | SpaceMarine | HTTPS 27443 | Прежний REST API |
-| Starship 1 / 2 | HTTPS 27543 / 27643 | REST facade и публичный SOAP endpoint |
-| Внутренний SOAP | HTTPS 27544 / 27644, loopback | REST → SOAP без конкуренции за worker |
-| Mule | HTTP 27780, loopback | `/health`, `/space-marines/{id}` |
-| Mule SOAP | HTTPS 27781, loopback | `/starship-1/StarshipService`, `/starship-2/StarshipService` |
-| Consul | HTTP 27500, loopback | Регистрации и health checks исходного стенда |
+| Starship 1 / 2 | HTTPS 27543 / 27643 | REST facade и публичный диагностический SOAP endpoint |
+| Внутренний SOAP | HTTPS 27544 / 27644, loopback | Mule → SOAP, отдельные workers |
+| Mule SpaceMarine | HTTP 27780, loopback | `/health`, `/space-marines/{id}` |
+| Mule JSON adapter | HTTPS 27781, loopback | `/starship-N/operations/{operation}`, POST JSON |
+| Consul | HTTP 27500, loopback | Регистрации и health checks |
 | HAProxy stats | HTTP 27344, loopback | Состояние backend-узлов |
 
-### SOAP через Mule
-
-В `wildfly-starship-1.properties` задано
-`starship.soap.url=https://localhost:27781/starship-1/StarshipService`,
-во втором узле — `/starship-2/StarshipService`. Параметр обязателен;
-прямого адреса SOAP по умолчанию в REST-прослойке нет.
-
-`mule/src/main/mule/proxy.xml` содержит flows `starship-1-soap-proxy` и
-`starship-2-soap-proxy`. Каждый принимает GET/POST, передаёт тело XML,
-Content-Type, SOAPAction и query parameters на фиксированный внутренний SOAP listener.
-Ответ сохраняет тело, Content-Type и статус, в том числе HTTP 500 с SOAP Fault.
-Сетевой сбой upstream даёт 502 от Mule и 503 во внешнем REST API.
-Преобразование REST/JSON ↔ SOAP/XML остаётся в `SoapStarshipClient` (CXF).
-
-Один runtime обслуживает SOAP и вложенные обращения EJB к SpaceMarine;
-у flows отдельные лимиты параллелизма. HTTPS listener Mule использует
-`SOA_KEYSTORE_PATH` (по умолчанию `~/soa/secrets/starship.p12`) и
-`SOA_KEYSTORE_PASSWORD`; upstream проверяется по существующему truststore.
-Публичный диагностический SOAP endpoint и адрес в сгенерированном WSDL сохранены;
-REST-клиент CXF использует явно настроенный адрес Mule, не адрес из WSDL.
+В свойствах WildFly задан `starship.mule.url=https://localhost:27781/starship-1/operations`
+или адрес для `starship-2`. Старый `starship.soap.url` удаляется установочным скриптом.
+Mule использует существующие PKCS12 keystore/truststore; проверка TLS включена.
+Серверный SOAP-контракт и клиентские REST URL не меняются. При остановке Mule
+внешние SOAP-зависимые операции возвращают 503; прямого обходного маршрута нет.
 
 ### SOAP-контракт
 
@@ -113,7 +85,7 @@ Flow сохраняет ответы SpaceMarine, включая 404. Ошибк
 2. Существующий REST-контракт покрыт сквозным smoke test.
 3. Реализованы typed WSDL/XSD, SOAP Fault и endpoint с вызовами EJB.
 4. Межсервисные GET-запросы проходят через flow Mule.
-5. REST → SOAP адаптер сохраняет внешний контракт клиента.
+5. Mule выполняет JSON ↔ SOAP преобразование, REST-прослойка сохраняет URL клиента.
 6. Обновлены сборка, deployment, управление процессами и health checks.
 7. Проверены SOAP, REST через HAProxy, межсервисные вызовы и отказ Mule.
 
@@ -201,7 +173,7 @@ ssh ifmo 'tail -50 ~/soa/logs/mule.out'
 ssh ifmo 'tail -50 ~/soa/logs/starship-1.out'
 ```
 
-Строки `MULE_PROXY method=GET path=/space-marines/... status=...` подтверждают прохождение запросов через шину. Строки `MULE_SOAP node=starship-1 method=POST status=200` (либо `500` для SOAP Fault) подтверждают SOAP-маршрут. Тела данных и секреты не логируются.
+Строки `MULE_PROXY method=GET path=/space-marines/... status=...` подтверждают прохождение запросов через шину. Строки `MULE_ADAPTER node=starship-1 operation=board status=200` (либо REST-статус ошибки) подтверждают SOAP-маршрут. Тела данных и секреты не логируются.
 
 ### Consul после долгого простоя
 

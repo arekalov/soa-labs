@@ -15,10 +15,6 @@
         </dependencies>
     </deployment>
     <sub-deployment name="starship-web.war">
-        <dependencies>
-            <module name="org.apache.cxf"/>
-            <module name="org.apache.cxf.impl" services="import"/>
-        </dependencies>
         <exclude-subsystems>
             <subsystem name="logging"/>
             <subsystem name="jaxrs"/>

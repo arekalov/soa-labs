@@ -21,6 +21,8 @@ for node in starship-1 starship-2; do
 done
 # Уже работающие SpaceMarine/Consul не перезапускаются. start идемпотентен.
 ssh "$SSH_HOST" 'set -e; ~/soa/bin/soa-control.sh start consul; ~/soa/bin/soa-control.sh start spacemarine; ~/soa/bin/soa-control.sh start mule; ~/soa/bin/soa-control.sh start starship-1; ~/soa/bin/soa-control.sh start starship-2; ~/soa/bin/soa-control.sh stop haproxy; ~/soa/bin/setup-haproxy.sh; ~/soa/bin/soa-control.sh start haproxy'
+# WSDL может отвечать даже при ошибке запуска Spring WAR: проверяем оба REST-контекста.
+ssh "$SSH_HOST" 'set -e; for port in 27543 27643; do curl -fsS --max-time 30 --cacert "$HOME/soa/secrets/starship.crt" "https://localhost:$port/starship?size=1" >/dev/null; done'
 # Существующий клиент копируется без изменения исходников или bundle.
 ssh "$SSH_HOST" 'set -e; mkdir -p ~/public_html/soa/lab4; cp ~/public_html/soa/lab3/index.html ~/public_html/soa/lab3/favicon.svg ~/public_html/soa/lab4/; cp -R ~/public_html/soa/lab3/assets ~/public_html/soa/lab4/; chmod 755 ~/public_html/soa/lab4'
 echo 'Стенд запущен. Через SSH-туннель выполните scripts/test-lab4.py и scripts/test-lab4-soap.py.'

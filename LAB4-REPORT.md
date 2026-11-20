@@ -2,7 +2,45 @@
 
 Дата проверки: 14 ноября 2026 года. Стенд: helios, ветка `lab4`.
 
-## Обновление 20 ноября 2026: REST → Mule → SOAP
+## Итог 20 ноября 2026: преобразования JSON ↔ SOAP выполняет Mule
+
+REST-прослойка использует `MuleStarshipClient`: отправляет JSON и возвращает
+JSON-ответ/HTTP-статус шины. Клиент CXF и SOAP-зависимости WAR удалены.
+Flows `starship-1-json-to-soap` и `starship-2-json-to-soap` на HTTPS :27781
+формируют SOAP Envelope через `transforms/request.dwl`. Обратное преобразование
+ответов, SOAP Fault и HTTP-статусов выполняет `transforms/response.dwl`.
+Сохранён внешний формат ошибок `{code, message, details}`.
+
+Используются core DataWeave и HTTP Connector установленного Mule Kernel.
+Бизнес-логика и серверный JBossWS/CXF остаются в SOAP-сервисе. Вложенный вызов
+SpaceMarine проходит через отдельный flow того же Mule на :27780.
+
+Проверено после развёртывания на Helios:
+
+| Проверка | Результат |
+|---|---|
+| Сборка EAR и существующие EJB-тесты | PASS; тестовая задача up-to-date |
+| Maven package и запуск приложения в Kernel | PASS |
+| JSON → SOAP → JSON напрямую через Mule, узел 1 | PASS, 13 HTTP-запросов |
+| JSON → SOAP → JSON напрямую через Mule, узел 2 | PASS, 13 HTTP-запросов |
+| Полный REST API через HAProxy, включая успешные board/unload | PASS, 71 HTTP-запрос |
+| Mule остановлен: список и поиск корабля | PASS, 2 запроса 503, без fallback |
+| Прямой SpaceMarine при остановленном Mule | 200 |
+| После повторного запуска Mule | REST 27543/27643: 200; все 6 компонентов работают |
+
+Тесты включают Unicode и XML-символы, пустые массивы, пагинацию, CRUD,
+конфликты и ошибки валидации; собственные тестовые объекты удалены.
+TLS и hostname проверяются. Скрипт деплоя теперь проверяет REST обеих реплик:
+отвечающий WSDL сам по себе не подтверждает запуск Spring WAR.
+
+Актуальные Mermaid-схемы — в [README-LAB4-INTERACTION.md](README-LAB4-INTERACTION.md).
+Обновлены также исходники component/activity/sequence в `docs/diagrams`.
+Пользовательские PNG не перезаписывались. Браузерные клики на этом этапе
+не повторялись; Runtime Manager не подключён.
+
+Ниже сохранены результаты предыдущих этапов, включая прежнюю архитектуру.
+
+## Предыдущий этап 20 ноября 2026: проксирование SOAP через Mule
 
 REST-прослойки обеих реплик используют HTTPS Mule :27781, flows
 `starship-1-soap-proxy` / `starship-2-soap-proxy`. Прямой SOAP URL по умолчанию

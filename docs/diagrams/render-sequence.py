@@ -6,10 +6,10 @@ out = Path(__file__).resolve().parents[1] / 'lab4-sequence.svg'
 participants = [
     ('Клиент', 'Браузер · React', '#eaf3ff'),
     ('HAProxy', 'Балансировщик', '#eaf3ff'),
-    ('starship/web', 'Controller + SOAP-клиент', '#eaf3ff'),
+    ('starship/web', 'Controller + JSON-клиент', '#eaf3ff'),
     ('starship/ejb', 'StarshipEndpoint', '#e8e3fa'),
     ('starship/ejb', 'StarshipBean', '#e1f3e9'),
-    ('Mule ESB', 'SOAP proxy + REST proxy', '#fff0d5'),
+    ('Mule ESB', 'JSON/SOAP + REST proxy', '#fff0d5'),
     ('SpaceMarine', 'web → ejb → repository', '#e1f3e9'),
     ('PostgreSQL', 'Таблицы сервисов', '#edf1f5'),
 ]
@@ -17,8 +17,8 @@ participants = [
 messages = [
     (0, 1, '1. POST /starship/54/board/12', False),
     (1, 2, '2. HTTPS → выбранный узел', False),
-    (2, 5, 'SOAP board(54, 12) → HTTPS :27781', False),
-    (5, 3, 'SOAP XML → HTTPS :27544 или :27644', False),
+    (2, 5, 'JSON board(54, 12) → HTTPS :27781', False),
+    (5, 3, 'JSON → SOAP XML → :27544 или :27644', False),
     (3, 4, '4. EJB: board(54, 12)', False),
     (4, 7, '5. Через StarshipRepository: найти корабль и проверить занятость десантника', False),
     (7, 4, '6. Корабль найден; десантник ещё не находится на борту', True),
@@ -32,7 +32,7 @@ messages = [
     (7, 4, '14. Изменения сохранены в транзакции', True),
     (4, 3, '15. StarshipDto', True),
     (3, 5, 'SOAP-ответ: Ship в XML', True),
-    (5, 2, 'SOAP XML без изменения', True),
+    (5, 2, 'SOAP → JSON + HTTP-статус', True),
     (2, 1, '17. HTTP 200 + JSON', True),
     (1, 0, '18. HTTP 200 + JSON', True),
 ]
@@ -69,7 +69,7 @@ for n,(a,b,label,response) in enumerate(messages):
     svg.append(f'<rect x="{middle-length/2}" y="{y-30}" width="{length}" height="25" fill="white"/>')
     text(middle,y-10,label,18 if abs(a-b)==1 else 20)
 text(width/2,1733,'Сплошная стрелка — запрос / вызов. Пунктирная — ответ. Узкие полосы — обработка или ожидание ответа.',21)
-text(width/2,1771,'REST → SOAP: SoapStarshipClient и CXF формируют XML; StarshipEndpoint передаёт операцию бизнес-компоненту.',21)
+text(width/2,1771,'Mule DataWeave формирует SOAP XML и преобразует ответы/Fault в JSON; REST-прослойка использует MuleStarshipClient.',21)
 text(width/2,1809,'Все SOAP-вызовы и интеграция Starship → SpaceMarine проходят через Mule. Проверка по HTTP и запись в БД — не распределённая транзакция.',21)
 text(width/2,1847,'Показан один выбранный узел Starship. SSH-туннель и Consul опущены. Два блока starship/ejb — классы одного модуля.',21)
 svg.append('</g></svg>')

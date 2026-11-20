@@ -5,8 +5,8 @@ digraph Activity {
   start [shape=circle, label="", width=0.2, style=filled, fillcolor="#25364b", color="#25364b"];
   request [label="Браузер: POST /starship/54/board/12\nHAProxy выбирает доступный узел"];
   controller [label="StarshipController.board(54, 12)\nИзвлечь параметры REST-запроса"];
-  soap [label="SoapStarshipClient → CXF\nСформировать SOAP XML и отправить по HTTPS"];
-  soapmule [label="Mule :27781 → SOAP listener нужного узла\nПередать XML без изменения", fillcolor="#fff0d5", color="#bc8b34"];
+  soap [label="MuleStarshipClient\nОтправить параметры в JSON по HTTPS"];
+  soapmule [label="Mule :27781 → SOAP listener нужного узла\nDataWeave: JSON → SOAP XML", fillcolor="#fff0d5", color="#bc8b34"];
   endpoint [label="StarshipEndpoint.board(54, 12)\nВызвать StarshipBean через EJB-контейнер"];
   ids [shape=diamond, label="Оба ID > 0?", fillcolor="#fff0d5", color="#bc8b34"];
   find [label="StarshipRepository\nНайти корабль 54", fillcolor="#dff4e9", color="#4b9671"];
@@ -17,7 +17,7 @@ digraph Activity {
   sm [label="SpaceMarineController → SpaceMarineBean\n→ SpaceMarineRepository → БД\nПолучить ответ о десантнике"];
   status [shape=diamond, label="Результат вызова\nчерез Mule?", fillcolor="#fff0d5", color="#bc8b34"];
   save [label="StarshipBean + StarshipRepository\nДобавить ID 12 в экипаж корабля 54\nСохранить связь в транзакции", fillcolor="#dff4e9", color="#4b9671"];
-  result [label="StarshipDto → SOAP Ship → XML → Mule\nCXF читает ответ → StarshipDto → REST JSON"];
+  result [label="StarshipDto → SOAP Ship → XML → Mule\nDataWeave: SOAP → JSON → REST-прослойка"];
   ok [label="HTTP 200\nБраузер показывает обновлённый экипаж", fillcolor="#dff4e9", color="#4b9671"];
   bad [label="Ошибка параметров · 400", fillcolor="#fde9e7", color="#bc675e"];
   noship [label="Корабль не найден · 404", fillcolor="#fde9e7", color="#bc675e"];
