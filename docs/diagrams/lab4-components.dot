@@ -1,0 +1,52 @@
+digraph Components {
+  graph [rankdir=TB, bgcolor="#ffffff", pad=0.4, nodesep=0.5, ranksep=0.65, fontname="Arial", fontsize=24, labelloc=t, label="ЛР4 · Компоненты системы\nREST-клиент → SOAP Starship → Mule → SpaceMarine"];
+  node [shape=box, style="rounded,filled", fillcolor="#eaf3ff", color="#4978ab", fontname="Arial", fontsize=16, margin="0.22,0.16"];
+  edge [fontname="Arial", fontsize=12, color="#4c6078", arrowsize=0.8];
+  browser [label="Браузер\nReact-клиент"];
+  tunnel [label="SSH-туннель\nlocalhost → Helios"];
+  browser -> tunnel;
+  subgraph cluster_helios {
+    label="Helios"; labeljust=l; fontname="Arial"; fontsize=22; color="#a9b8ca"; style="rounded"; margin=24;
+    ha [label="HAProxy :27343\nОбратный прокси · roundrobin", fillcolor="#dceaff"];
+    subgraph cluster_s1 {
+      label="WildFly · Starship 1"; labeljust=l; fontsize=18; style="rounded,filled"; fillcolor="#f4f8ff"; color="#c4d5ed";
+      r1 [label="REST-прослойка :27543\nStarshipController\nSoapStarshipClient"];
+      s1 [label="SOAP endpoint :27544\nStarshipEndpoint\nВнутренний HTTPS listener"];
+      b1 [label="StarshipBean\nБизнес-логика", fillcolor="#dff4e9", color="#4b9671"];
+      r1 -> s1 [label="HTTPS · SOAP XML"];
+      s1 -> b1 [label="Вызов EJB"];
+    }
+    subgraph cluster_s2 {
+      label="WildFly · Starship 2"; labeljust=l; fontsize=18; style="rounded,filled"; fillcolor="#f4f8ff"; color="#c4d5ed";
+      r2 [label="REST-прослойка :27643\nStarshipController\nSoapStarshipClient"];
+      s2 [label="SOAP endpoint :27644\nStarshipEndpoint\nВнутренний HTTPS listener"];
+      b2 [label="StarshipBean\nБизнес-логика", fillcolor="#dff4e9", color="#4b9671"];
+      r2 -> s2 [label="HTTPS · SOAP XML"];
+      s2 -> b2 [label="Вызов EJB"];
+    }
+    mule [label="Mule ESB :27780\nHTTP-маршрут /space-marines/{id}", fillcolor="#fff0d5", color="#bc8b34"];
+    subgraph cluster_sm {
+      label="WildFly · SpaceMarine"; labeljust=l; fontsize=18; style="rounded,filled"; fillcolor="#f4f8ff"; color="#c4d5ed";
+      restsm [label="REST API :27443\nSpaceMarineController"];
+      beansm [label="SpaceMarineBean\nБизнес-логика", fillcolor="#dff4e9", color="#4b9671"];
+      restsm -> beansm [label="Вызов EJB"];
+    }
+    consul [label="Consul :27500\nРеестр и health checks\nНе пересылает бизнес-запросы", fillcolor="#f2eafa", color="#9774b7"];
+    ha -> r1 [label="HTTPS"];
+    ha -> r2 [label="HTTPS"];
+    b1 -> mule [label="SpaceMarineClient\nHTTP GET"];
+    b2 -> mule [label="SpaceMarineClient\nHTTP GET"];
+    mule -> restsm [label="HTTPS · REST / JSON"];
+    b1 -> consul [style=dashed, color="#9774b7", label="Регистрация", constraint=false];
+    b2 -> consul [style=dashed, color="#9774b7", constraint=false];
+    beansm -> consul [style=dashed, color="#9774b7", label="Регистрация", constraint=false];
+  }
+  tunnel -> ha [label="Корабли · HTTPS :27343"];
+  tunnel -> restsm [label="Десантники · HTTPS :27443", color="#287aa0"];
+  db [shape=cylinder, label="PostgreSQL\nТаблицы starship, starship_marine, space_marine", fillcolor="#edf1f5", color="#6d7d90"];
+  b1 -> db [label="JPA · данные кораблей"];
+  b2 -> db [label="JPA"];
+  beansm -> db [label="JPA · данные десантников"];
+  note [shape=plain, fontsize=12, fontcolor="#596578", label="Два Starship — копии одного EAR с общей БД.\nREST → SOAP выполняет starship/web; Mule связывает Starship и SpaceMarine.\nВнутренние SOAP listener и Mule доступны на loopback.\nПубличный SOAP endpoint также доступен через внешние порты Starship и HAProxy.\nСплошные стрелки — вызовы / доступ к данным; пунктир — регистрации сервисов."];
+  db -> note [style=invis];
+}
