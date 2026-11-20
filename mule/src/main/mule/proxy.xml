@@ -17,6 +17,31 @@
       </tls:context>
     </http:request-connection>
   </http:request-config>
+  <!-- SOAP forwarding uses TLS on both legs; targets are fixed per replica. -->
+  <http:listener-config name="soap-loopback">
+    <http:listener-connection protocol="HTTPS" host="127.0.0.1" port="27781">
+      <tls:context>
+        <tls:key-store path="${SOA_KEYSTORE_PATH}" password="${SOA_KEYSTORE_PASSWORD}"
+                       keyPassword="${SOA_KEYSTORE_PASSWORD}" type="pkcs12" alias="starship"/>
+      </tls:context>
+    </http:listener-connection>
+  </http:listener-config>
+  <http:request-config name="starship-1">
+    <http:request-connection protocol="HTTPS" host="localhost" port="27544"
+                             maxConnections="2" connectionIdleTimeout="10000">
+      <tls:context>
+        <tls:trust-store path="${SOA_TRUSTSTORE_PATH}" password="${SOA_TRUSTSTORE_PASSWORD}" type="pkcs12"/>
+      </tls:context>
+    </http:request-connection>
+  </http:request-config>
+  <http:request-config name="starship-2">
+    <http:request-connection protocol="HTTPS" host="localhost" port="27644"
+                             maxConnections="2" connectionIdleTimeout="10000">
+      <tls:context>
+        <tls:trust-store path="${SOA_TRUSTSTORE_PATH}" password="${SOA_TRUSTSTORE_PASSWORD}" type="pkcs12"/>
+      </tls:context>
+    </http:request-connection>
+  </http:request-config>
   <flow name="health" maxConcurrency="1">
     <http:listener config-ref="loopback" path="/health" allowedMethods="GET"/>
     <set-payload value="ok" mimeType="text/plain"/>
@@ -41,6 +66,62 @@
     <error-handler>
       <on-error-propagate logException="false">
         <logger level="WARN" message="#[ 'MULE_PROXY method=GET path=' ++ vars.requestPath ++ ' status=502 upstream=https://127.0.0.1:27443 error=' ++ (error.errorType.identifier as String) ]"/>
+      </on-error-propagate>
+    </error-handler>
+  </flow>
+  <flow name="starship-1-soap-proxy" maxConcurrency="2">
+    <http:listener config-ref="soap-loopback" path="/starship-1/StarshipService" allowedMethods="GET,POST">
+      <http:response statusCode="#[attributes.statusCode default 200]">
+        <http:headers>#[{'Content-Type': attributes.headers.'content-type' default 'text/xml; charset=UTF-8'}]</http:headers>
+      </http:response>
+      <http:error-response statusCode="502">
+        <http:body>SOAP upstream unavailable</http:body>
+      </http:error-response>
+    </http:listener>
+    <set-variable variableName="requestMethod" value="#[attributes.method]"/>
+    <!-- HTTP request replaces attributes; preserve only what the upstream needs. -->
+    <http:request config-ref="starship-1" method="#[vars.requestMethod]"
+                  path="/starship-soap/StarshipService" responseTimeout="25000" followRedirects="false">
+      <http:headers>#[{'Content-Type': attributes.headers.'content-type' default 'text/xml; charset=UTF-8',
+                        'SOAPAction': attributes.headers.soapaction default ''}]</http:headers>
+      <http:query-params>#[attributes.queryParams]</http:query-params>
+      <http:response-validator>
+        <!-- A SOAP Fault is a valid protocol response: preserve HTTP 500 and XML. -->
+        <http:success-status-code-validator values="100..599"/>
+      </http:response-validator>
+    </http:request>
+    <logger level="INFO" message="#[ 'MULE_SOAP node=starship-1 method=' ++ vars.requestMethod ++ ' status=' ++ (attributes.statusCode as String) ]"/>
+    <error-handler>
+      <on-error-propagate logException="false">
+        <logger level="WARN" message="#[ 'MULE_SOAP node=starship-1 status=502 error=' ++ (error.errorType.identifier as String) ]"/>
+      </on-error-propagate>
+    </error-handler>
+  </flow>
+  <flow name="starship-2-soap-proxy" maxConcurrency="2">
+    <http:listener config-ref="soap-loopback" path="/starship-2/StarshipService" allowedMethods="GET,POST">
+      <http:response statusCode="#[attributes.statusCode default 200]">
+        <http:headers>#[{'Content-Type': attributes.headers.'content-type' default 'text/xml; charset=UTF-8'}]</http:headers>
+      </http:response>
+      <http:error-response statusCode="502">
+        <http:body>SOAP upstream unavailable</http:body>
+      </http:error-response>
+    </http:listener>
+    <set-variable variableName="requestMethod" value="#[attributes.method]"/>
+    <!-- HTTP request replaces attributes; preserve only what the upstream needs. -->
+    <http:request config-ref="starship-2" method="#[vars.requestMethod]"
+                  path="/starship-soap/StarshipService" responseTimeout="25000" followRedirects="false">
+      <http:headers>#[{'Content-Type': attributes.headers.'content-type' default 'text/xml; charset=UTF-8',
+                        'SOAPAction': attributes.headers.soapaction default ''}]</http:headers>
+      <http:query-params>#[attributes.queryParams]</http:query-params>
+      <http:response-validator>
+        <!-- A SOAP Fault is a valid protocol response: preserve HTTP 500 and XML. -->
+        <http:success-status-code-validator values="100..599"/>
+      </http:response-validator>
+    </http:request>
+    <logger level="INFO" message="#[ 'MULE_SOAP node=starship-2 method=' ++ vars.requestMethod ++ ' status=' ++ (attributes.statusCode as String) ]"/>
+    <error-handler>
+      <on-error-propagate logException="false">
+        <logger level="WARN" message="#[ 'MULE_SOAP node=starship-2 status=502 error=' ++ (error.errorType.identifier as String) ]"/>
       </on-error-propagate>
     </error-handler>
   </flow>

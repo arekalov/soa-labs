@@ -9,9 +9,8 @@ performed here. Example tunnels (replace SSH_HOST with your SSH alias):
   python3 scripts/test-lab4.py --starship-ca-cert certs/starship.crt \
       --spacemarine-ca-cert certs/spacemarine.crt
 
-Stop Mule yourself before the unavailable run. That mode skips direct Mule GET
-and normal boarding tests. --marine-id may reuse an existing, unboarded marine
-ONLY in this mode; it is never deleted. Otherwise a new marine is always made.
+Stop Mule yourself before --mule-unavailable. This mode checks read-only
+Starship requests return 503 and creates no fixtures: all SOAP calls use Mule.
 URLs include the resource prefix for Starship, but not for SpaceMarine/Mule.
 Environment: LAB4_STARSHIP_URL, LAB4_SPACEMARINE_URL, LAB4_MULE_URL,
 LAB4_CA_CERT, LAB4_STARSHIP_CA_CERT, LAB4_SPACEMARINE_CA_CERT, LAB4_TIMEOUT.
@@ -224,7 +223,7 @@ class Smoke:
 
     def cleanup(self):
         errors = []
-        # Ships before marines; no unload dependency on Mule during cleanup.
+        # Ships before marines; Mule must be running for SOAP cleanup.
         entries = sorted(self.owned, key=lambda entry: entry[0] != self.ships)
         for base, object_id in entries:
             try:
@@ -235,6 +234,10 @@ class Smoke:
 
     def run(self):
         print('RUN ' + self.token, flush=True)
+        if self.args.mule_unavailable:
+            self.request('GET', self.ships, 503)
+            self.request('GET', self.ships + '/2147483647', 503)
+            return
         a = self.create_ship(self.special)
         b = self.create_ship(self.special)
         self.expect_ship(self.get_ship(a), a, self.special, [])
@@ -273,17 +276,13 @@ class Smoke:
         self.expect_ship(value, b, renamed, [])
         self.expect_ship(self.get_ship(b), b, renamed, [])
 
-        if self.args.marine_id is not None:
-            marine = marine_shape(self.request('GET', self.marines + '/' + str(self.args.marine_id)))
-            check(marine['id'] == self.args.marine_id, 'Existing marine ID mismatch')
-        else:
-            payload = {'name': self.special + ' marine', 'coordinates': {'x': 10, 'y': 3.5},
-                       'health': 85.5, 'loyal': True, 'category': 'TACTICAL',
-                       'achievements': '<&> Ω', 'chapter': {'name': self.token, 'parentLegion': None}}
-            marine = self.request('POST', self.marines, 201, payload, self.marines)
-            marine_shape(marine)
-            for key, value in payload.items():
-                check(marine.get(key) == value, 'SpaceMarine create round-trip failed: ' + key)
+        payload = {'name': self.special + ' marine', 'coordinates': {'x': 10, 'y': 3.5},
+                   'health': 85.5, 'loyal': True, 'category': 'TACTICAL',
+                   'achievements': '<&> Ω', 'chapter': {'name': self.token, 'parentLegion': None}}
+        marine = self.request('POST', self.marines, 201, payload, self.marines)
+        marine_shape(marine)
+        for key, value in payload.items():
+            check(marine.get(key) == value, 'SpaceMarine create round-trip failed: ' + key)
         mid = marine['id']
         fetched = marine_shape(self.request('GET', self.marines + '/' + str(mid)))
         check(fetched == marine, 'SpaceMarine GET differs from fixture')
@@ -292,14 +291,6 @@ class Smoke:
         check(result['items'] == [marine], 'SpaceMarine filtered list mismatch')
 
         board = self.ships + '/' + str(a) + '/board/' + str(mid)
-        if self.args.mule_unavailable:
-            before = self.get_ship(a)
-            try:
-                self.request('POST', board, 503)
-            finally:
-                check(self.get_ship(a) == before, 'Board during Mule outage mutated the ship')
-            return
-
         direct = marine_shape(self.request('GET', self.mule + '/' + str(mid)))
         check(direct == marine, 'Direct Mule GET differs from REST SpaceMarine fixture')
         for operation in ('board', 'unload'):
@@ -347,15 +338,12 @@ def arguments():
     parser.add_argument('--spacemarine-ca-cert', default=os.getenv('LAB4_SPACEMARINE_CA_CERT'),
                         help='SpaceMarine origin CA PEM; overrides --ca-cert')
     parser.add_argument('--timeout', type=float, default=os.getenv('LAB4_TIMEOUT', '20'), help='Seconds per HTTP request')
-    parser.add_argument('--mule-unavailable', action='store_true', help='Expect board=503; Mule must already be stopped')
-    parser.add_argument('--marine-id', type=int, help='Existing unboarded marine; outage mode only, never deleted')
+    parser.add_argument('--mule-unavailable', action='store_true', help='Expect Starship reads=503 without mutations; Mule must already be stopped')
     args = parser.parse_args()
     if args.insecure and (args.starship_ca_cert or args.spacemarine_ca_cert):
         parser.error('--insecure cannot be combined with service CA options')
     if not math.isfinite(args.timeout) or args.timeout <= 0:
         parser.error('--timeout must be finite and positive')
-    if args.marine_id is not None and (not args.mule_unavailable or not 0 < args.marine_id <= 2147483647):
-        parser.error('--marine-id requires --mule-unavailable and a positive int32')
     for url in (args.starship_url, args.spacemarine_url, args.mule_url):
         parsed = urlsplit(url)
         if parsed.scheme not in ('http', 'https') or not parsed.hostname or parsed.query or parsed.fragment or parsed.username:

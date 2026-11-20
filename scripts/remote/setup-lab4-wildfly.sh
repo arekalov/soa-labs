@@ -22,7 +22,7 @@ TMP_PROPERTIES="$(mktemp)"
 CLI="$(mktemp)"
 trap 'rm -f "$TMP_PROPERTIES" "$CLI"' EXIT
 sed '/^starship.soap.url=/d; /^soa.mule.url=/d' "$PROPERTIES" > "$TMP_PROPERTIES"
-printf '\nstarship.soap.url=https://localhost:%s/starship-soap/StarshipService\nsoa.mule.url=http://127.0.0.1:27780\n' "$((8444 + OFFSET))" >> "$TMP_PROPERTIES"
+printf '\nstarship.soap.url=https://localhost:27781/%s/StarshipService\nsoa.mule.url=http://127.0.0.1:27780\n' "$NODE" >> "$TMP_PROPERTIES"
 cp "$TMP_PROPERTIES" "$PROPERTIES"
 [ -f "$BASE/configuration/standalone.pre-lab4.xml" ] || cp "$BASE/configuration/standalone.xml" "$BASE/configuration/standalone.pre-lab4.xml"
 cat > "$CLI" <<'CLI'

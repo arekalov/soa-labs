@@ -17,9 +17,9 @@ class BusinessInterfaceConfig {
         fun setting(property: String, variable: String): String? =
             environment.getProperty(property) ?: System.getenv(variable)
 
-        val offset = environment.getProperty("jboss.socket.binding.port-offset", Int::class.java, 0)
-        val endpoint = setting("starship.soap.url", "STARSHIP_SOAP_URL")
-            ?: "https://localhost:${8444 + offset}/starship-soap/StarshipService"
+        val endpoint = requireNotNull(setting("starship.soap.url", "STARSHIP_SOAP_URL")) {
+            "starship.soap.url must point to the Mule SOAP route for this replica"
+        }
         val uri = java.net.URI(endpoint)
         require(uri.scheme == "https" && uri.host != null) { "starship.soap.url must be an absolute HTTPS URL" }
         val trustManagers = setting("soa.truststore.path", "SOA_TRUSTSTORE_PATH")?.let { path ->

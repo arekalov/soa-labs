@@ -41,7 +41,8 @@ Kernel при deployment; успешная упаковка сама по себ
 остановленном Mule. `soa-control.sh` эти файлы не изменяют.
 
 Секреты читаются из `~/soa/secrets/soa.env`:
-`SOA_TRUSTSTORE_PATH`, `SOA_TRUSTSTORE_PASSWORD` (PKCS12).
+`SOA_TRUSTSTORE_PATH`, `SOA_TRUSTSTORE_PASSWORD` (PKCS12), `SOA_KEYSTORE_PASSWORD`.
+Для HTTPS listener задан `SOA_KEYSTORE_PATH` (по умолчанию `~/soa/secrets/starship.p12`, alias `starship`).
 Пароль передаётся через окружение, не через аргументы JVM или XML-файл.
 Launcher включает `mule.tlsStores.filesystemLookup.enable=true`: без него
 Kernel 4.11 не разрешает загрузку внешнего truststore из файловой системы.
@@ -54,8 +55,26 @@ IP SAN `127.0.0.1` (текущий публичный `certs/spacemarine.crt` с
 * `GET /space-marines/{id}` → `https://127.0.0.1:27443`, тот же path и GET.
   Тело и статус upstream сохраняются, включая 400/404/500; redirect не выполняется.
 * Ошибка TLS/соединения/таймаут → `502 upstream unavailable`.
-* Это узкий proxy текущего GET-клиента: не универсальный reverse proxy заголовков,
+* Маршрут SpaceMarine — узкий proxy текущего GET-клиента: не универсальный reverse proxy заголовков,
   cookies, query parameters или других HTTP методов.
+
+* `GET,POST https://localhost:27781/starship-1/StarshipService` → SOAP на `https://localhost:27544/starship-soap/StarshipService`.
+* `GET,POST https://localhost:27781/starship-2/StarshipService` → SOAP на `https://localhost:27644/starship-soap/StarshipService`.
+  SOAP XML, Content-Type, SOAPAction, query parameters и ответ сохраняются;
+  HTTP 500 с SOAP Fault передаётся клиенту без замены на generic 502.
+  Транспортная ошибка возвращает 502. Upstream timeout — 25 секунд.
+  Адрес назначения фиксирован конфигурацией, redirect и прикладные retry отсутствуют.
+  В stdout — `MULE_SOAP node=starship-1 method=POST status=200` (либо статус Fault).
+
+```text
+REST-прослойка → CXF → Mule HTTPS :27781 → SOAP endpoint → StarshipBean
+                                                           │
+                         SpaceMarine ← Mule HTTP :27780 ←───┘
+```
+
+Оба блока Mule — один runtime. У двух SOAP flows и SpaceMarine flow отдельные
+`maxConcurrency=2`, поэтому вложенное обращение к SpaceMarine не занимает слот
+того же SOAP flow. Полные схемы: [взаимодействие](../README-LAB4-INTERACTION.md).
 
 ```bash
 curl -i http://127.0.0.1:27780/health

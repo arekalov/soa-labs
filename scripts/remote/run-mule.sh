@@ -15,6 +15,10 @@ export JAVA_HOME="${MULE_JAVA_HOME:-/usr/local/openjdk17}"
 : "${SOA_TRUSTSTORE_PASSWORD:?Missing truststore password}"
 [ -r "$SOA_TRUSTSTORE_PATH" ] || { echo 'Truststore is not readable' >&2; exit 1; }
 export SOA_TRUSTSTORE_PATH SOA_TRUSTSTORE_PASSWORD
+export SOA_KEYSTORE_PATH="${SOA_KEYSTORE_PATH:-$SOA/secrets/starship.p12}"
+: "${SOA_KEYSTORE_PASSWORD:?Missing keystore password}"
+export SOA_KEYSTORE_PASSWORD
+[ -r "$SOA_KEYSTORE_PATH" ] || { echo 'Keystore is not readable' >&2; exit 1; }
 ulimit -c 0
 ulimit -s 2048
 cd "$MULE_HOME"
