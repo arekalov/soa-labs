@@ -1,0 +1,127 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2640" height="1770" viewBox="0 0 2640 1770">
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#344d6b"/></marker></defs>
+<rect width="100%" height="100%" fill="white"/>
+<g font-family="Arial, sans-serif" fill="#213247">
+<text x="1320.0" y="45" font-size="32" text-anchor="middle" font-weight="bold">ЛР4 · Диаграмма последовательности</text>
+<text x="1320.0" y="83" font-size="22" text-anchor="middle" font-weight="normal">Посадка десантника 12 на корабль 54 · успешный сценарий · время идёт сверху вниз</text>
+<rect x="15" y="120" width="300" height="82" rx="10" fill="#eaf3ff" stroke="#849bb4" stroke-width="1.5"/>
+<text x="165" y="152" font-size="24" text-anchor="middle" font-weight="bold">Клиент</text>
+<text x="165" y="181" font-size="18" text-anchor="middle" font-weight="normal">Браузер · React</text>
+<line x1="165" y1="202" x2="165" y2="1470" stroke="#a4b1c0" stroke-width="1.5" stroke-dasharray="7 7"/>
+<rect x="15" y="1470" width="300" height="82" rx="10" fill="#eaf3ff" stroke="#849bb4" stroke-width="1.5"/>
+<text x="165" y="1502" font-size="24" text-anchor="middle" font-weight="bold">Клиент</text>
+<text x="165" y="1531" font-size="18" text-anchor="middle" font-weight="normal">Браузер · React</text>
+<rect x="345" y="120" width="300" height="82" rx="10" fill="#eaf3ff" stroke="#849bb4" stroke-width="1.5"/>
+<text x="495" y="152" font-size="24" text-anchor="middle" font-weight="bold">HAProxy</text>
+<text x="495" y="181" font-size="18" text-anchor="middle" font-weight="normal">Балансировщик</text>
+<line x1="495" y1="202" x2="495" y2="1470" stroke="#a4b1c0" stroke-width="1.5" stroke-dasharray="7 7"/>
+<rect x="345" y="1470" width="300" height="82" rx="10" fill="#eaf3ff" stroke="#849bb4" stroke-width="1.5"/>
+<text x="495" y="1502" font-size="24" text-anchor="middle" font-weight="bold">HAProxy</text>
+<text x="495" y="1531" font-size="18" text-anchor="middle" font-weight="normal">Балансировщик</text>
+<rect x="675" y="120" width="300" height="82" rx="10" fill="#eaf3ff" stroke="#849bb4" stroke-width="1.5"/>
+<text x="825" y="152" font-size="24" text-anchor="middle" font-weight="bold">starship/web</text>
+<text x="825" y="181" font-size="18" text-anchor="middle" font-weight="normal">Controller + SOAP-клиент</text>
+<line x1="825" y1="202" x2="825" y2="1470" stroke="#a4b1c0" stroke-width="1.5" stroke-dasharray="7 7"/>
+<rect x="675" y="1470" width="300" height="82" rx="10" fill="#eaf3ff" stroke="#849bb4" stroke-width="1.5"/>
+<text x="825" y="1502" font-size="24" text-anchor="middle" font-weight="bold">starship/web</text>
+<text x="825" y="1531" font-size="18" text-anchor="middle" font-weight="normal">Controller + SOAP-клиент</text>
+<rect x="1005" y="120" width="300" height="82" rx="10" fill="#e8e3fa" stroke="#849bb4" stroke-width="1.5"/>
+<text x="1155" y="152" font-size="24" text-anchor="middle" font-weight="bold">starship/ejb</text>
+<text x="1155" y="181" font-size="18" text-anchor="middle" font-weight="normal">StarshipEndpoint</text>
+<line x1="1155" y1="202" x2="1155" y2="1470" stroke="#a4b1c0" stroke-width="1.5" stroke-dasharray="7 7"/>
+<rect x="1005" y="1470" width="300" height="82" rx="10" fill="#e8e3fa" stroke="#849bb4" stroke-width="1.5"/>
+<text x="1155" y="1502" font-size="24" text-anchor="middle" font-weight="bold">starship/ejb</text>
+<text x="1155" y="1531" font-size="18" text-anchor="middle" font-weight="normal">StarshipEndpoint</text>
+<rect x="1335" y="120" width="300" height="82" rx="10" fill="#e1f3e9" stroke="#849bb4" stroke-width="1.5"/>
+<text x="1485" y="152" font-size="24" text-anchor="middle" font-weight="bold">starship/ejb</text>
+<text x="1485" y="181" font-size="18" text-anchor="middle" font-weight="normal">StarshipBean</text>
+<line x1="1485" y1="202" x2="1485" y2="1470" stroke="#a4b1c0" stroke-width="1.5" stroke-dasharray="7 7"/>
+<rect x="1335" y="1470" width="300" height="82" rx="10" fill="#e1f3e9" stroke="#849bb4" stroke-width="1.5"/>
+<text x="1485" y="1502" font-size="24" text-anchor="middle" font-weight="bold">starship/ejb</text>
+<text x="1485" y="1531" font-size="18" text-anchor="middle" font-weight="normal">StarshipBean</text>
+<rect x="1665" y="120" width="300" height="82" rx="10" fill="#fff0d5" stroke="#849bb4" stroke-width="1.5"/>
+<text x="1815" y="152" font-size="24" text-anchor="middle" font-weight="bold">Mule ESB</text>
+<text x="1815" y="181" font-size="18" text-anchor="middle" font-weight="normal">space-marine-proxy</text>
+<line x1="1815" y1="202" x2="1815" y2="1470" stroke="#a4b1c0" stroke-width="1.5" stroke-dasharray="7 7"/>
+<rect x="1665" y="1470" width="300" height="82" rx="10" fill="#fff0d5" stroke="#849bb4" stroke-width="1.5"/>
+<text x="1815" y="1502" font-size="24" text-anchor="middle" font-weight="bold">Mule ESB</text>
+<text x="1815" y="1531" font-size="18" text-anchor="middle" font-weight="normal">space-marine-proxy</text>
+<rect x="1995" y="120" width="300" height="82" rx="10" fill="#e1f3e9" stroke="#849bb4" stroke-width="1.5"/>
+<text x="2145" y="152" font-size="24" text-anchor="middle" font-weight="bold">SpaceMarine</text>
+<text x="2145" y="181" font-size="18" text-anchor="middle" font-weight="normal">web → ejb → repository</text>
+<line x1="2145" y1="202" x2="2145" y2="1470" stroke="#a4b1c0" stroke-width="1.5" stroke-dasharray="7 7"/>
+<rect x="1995" y="1470" width="300" height="82" rx="10" fill="#e1f3e9" stroke="#849bb4" stroke-width="1.5"/>
+<text x="2145" y="1502" font-size="24" text-anchor="middle" font-weight="bold">SpaceMarine</text>
+<text x="2145" y="1531" font-size="18" text-anchor="middle" font-weight="normal">web → ejb → repository</text>
+<rect x="2325" y="120" width="300" height="82" rx="10" fill="#edf1f5" stroke="#849bb4" stroke-width="1.5"/>
+<text x="2475" y="152" font-size="24" text-anchor="middle" font-weight="bold">PostgreSQL</text>
+<text x="2475" y="181" font-size="18" text-anchor="middle" font-weight="normal">Таблицы сервисов</text>
+<line x1="2475" y1="202" x2="2475" y2="1470" stroke="#a4b1c0" stroke-width="1.5" stroke-dasharray="7 7"/>
+<rect x="2325" y="1470" width="300" height="82" rx="10" fill="#edf1f5" stroke="#849bb4" stroke-width="1.5"/>
+<text x="2475" y="1502" font-size="24" text-anchor="middle" font-weight="bold">PostgreSQL</text>
+<text x="2475" y="1531" font-size="18" text-anchor="middle" font-weight="normal">Таблицы сервисов</text>
+<rect x="488" y="260" width="14" height="1105" fill="#dae6f3" stroke="#849bb4"/>
+<rect x="818" y="325" width="14" height="975" fill="#dae6f3" stroke="#849bb4"/>
+<rect x="1148" y="390" width="14" height="845" fill="#dae6f3" stroke="#849bb4"/>
+<rect x="1478" y="455" width="14" height="715" fill="#dae6f3" stroke="#849bb4"/>
+<rect x="1808" y="650" width="14" height="325" fill="#dae6f3" stroke="#849bb4"/>
+<rect x="2138" y="715" width="14" height="195" fill="#dae6f3" stroke="#849bb4"/>
+<line x1="165" y1="260" x2="495" y2="260" stroke="#344d6b" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="176.3" y="230" width="307.4" height="25" fill="white"/>
+<text x="330.0" y="250" font-size="18" text-anchor="middle" font-weight="normal">1. POST /starship/54/board/12</text>
+<line x1="495" y1="325" x2="825" y2="325" stroke="#344d6b" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="527.5" y="295" width="265.0" height="25" fill="white"/>
+<text x="660.0" y="315" font-size="18" text-anchor="middle" font-weight="normal">2. HTTPS → выбранный узел</text>
+<line x1="825" y1="390" x2="1155" y2="390" stroke="#344d6b" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="878.7" y="360" width="222.6" height="25" fill="white"/>
+<text x="990.0" y="380" font-size="18" text-anchor="middle" font-weight="normal">3. SOAP board(54, 12)</text>
+<line x1="1155" y1="455" x2="1485" y2="455" stroke="#344d6b" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="1208.7" y="425" width="222.6" height="25" fill="white"/>
+<text x="1320.0" y="445" font-size="18" text-anchor="middle" font-weight="normal">4. EJB: board(54, 12)</text>
+<line x1="1485" y1="520" x2="2475" y2="520" stroke="#344d6b" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="1582.5" y="490" width="795.0" height="25" fill="white"/>
+<text x="1980.0" y="510" font-size="20" text-anchor="middle" font-weight="normal">5. Через StarshipRepository: найти корабль и проверить занятость десантника</text>
+<line x1="2475" y1="585" x2="1485" y2="585" stroke="#344d6b" stroke-width="2" stroke-dasharray="9 6" marker-end="url(#arrow)"/>
+<rect x="1693.8" y="555" width="572.4" height="25" fill="white"/>
+<text x="1980.0" y="575" font-size="20" text-anchor="middle" font-weight="normal">6. Корабль найден; десантник ещё не находится на борту</text>
+<line x1="1485" y1="650" x2="1815" y2="650" stroke="#344d6b" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="1491.0" y="620" width="318" height="25" fill="white"/>
+<text x="1650.0" y="640" font-size="18" text-anchor="middle" font-weight="normal">7. SpaceMarineClient → HTTP GET /space-marines/12</text>
+<line x1="1815" y1="715" x2="2145" y2="715" stroke="#344d6b" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="1821.0" y="685" width="318" height="25" fill="white"/>
+<text x="1980.0" y="705" font-size="18" text-anchor="middle" font-weight="normal">8. HTTPS GET /space-marines/12</text>
+<line x1="2145" y1="780" x2="2475" y2="780" stroke="#344d6b" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="2193.4" y="750" width="233.2" height="25" fill="white"/>
+<text x="2310.0" y="770" font-size="18" text-anchor="middle" font-weight="normal">9. Найти десантника 12</text>
+<line x1="2475" y1="845" x2="2145" y2="845" stroke="#344d6b" stroke-width="2" stroke-dasharray="9 6" marker-end="url(#arrow)"/>
+<rect x="2198.7" y="815" width="222.6" height="25" fill="white"/>
+<text x="2310.0" y="835" font-size="18" text-anchor="middle" font-weight="normal">10. Данные десантника</text>
+<line x1="2145" y1="910" x2="1815" y2="910" stroke="#344d6b" stroke-width="2" stroke-dasharray="9 6" marker-end="url(#arrow)"/>
+<rect x="1879.3" y="880" width="201.4" height="25" fill="white"/>
+<text x="1980.0" y="900" font-size="18" text-anchor="middle" font-weight="normal">11. HTTP 200 + JSON</text>
+<line x1="1815" y1="975" x2="1485" y2="975" stroke="#344d6b" stroke-width="2" stroke-dasharray="9 6" marker-end="url(#arrow)"/>
+<rect x="1491.0" y="945" width="318" height="25" fill="white"/>
+<text x="1650.0" y="965" font-size="18" text-anchor="middle" font-weight="normal">12. HTTP 200 → SpaceMarineClient.exists(12) возвращает true</text>
+<line x1="1485" y1="1040" x2="2475" y2="1040" stroke="#344d6b" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="1603.7" y="1010" width="752.6" height="25" fill="white"/>
+<text x="1980.0" y="1030" font-size="20" text-anchor="middle" font-weight="normal">13. Через StarshipRepository: сохранить связь корабль 54 → десантник 12</text>
+<line x1="2475" y1="1105" x2="1485" y2="1105" stroke="#344d6b" stroke-width="2" stroke-dasharray="9 6" marker-end="url(#arrow)"/>
+<rect x="1789.2" y="1075" width="381.59999999999997" height="25" fill="white"/>
+<text x="1980.0" y="1095" font-size="20" text-anchor="middle" font-weight="normal">14. Изменения сохранены в транзакции</text>
+<line x1="1485" y1="1170" x2="1155" y2="1170" stroke="#344d6b" stroke-width="2" stroke-dasharray="9 6" marker-end="url(#arrow)"/>
+<rect x="1240.5" y="1140" width="159.0" height="25" fill="white"/>
+<text x="1320.0" y="1160" font-size="18" text-anchor="middle" font-weight="normal">15. StarshipDto</text>
+<line x1="1155" y1="1235" x2="825" y2="1235" stroke="#344d6b" stroke-width="2" stroke-dasharray="9 6" marker-end="url(#arrow)"/>
+<rect x="852.2" y="1205" width="275.59999999999997" height="25" fill="white"/>
+<text x="990.0" y="1225" font-size="18" text-anchor="middle" font-weight="normal">16. SOAP-ответ: Ship в XML</text>
+<line x1="825" y1="1300" x2="495" y2="1300" stroke="#344d6b" stroke-width="2" stroke-dasharray="9 6" marker-end="url(#arrow)"/>
+<rect x="559.3" y="1270" width="201.4" height="25" fill="white"/>
+<text x="660.0" y="1290" font-size="18" text-anchor="middle" font-weight="normal">17. HTTP 200 + JSON</text>
+<line x1="495" y1="1365" x2="165" y2="1365" stroke="#344d6b" stroke-width="2" stroke-dasharray="9 6" marker-end="url(#arrow)"/>
+<rect x="229.3" y="1335" width="201.4" height="25" fill="white"/>
+<text x="330.0" y="1355" font-size="18" text-anchor="middle" font-weight="normal">18. HTTP 200 + JSON</text>
+<text x="1320.0" y="1603" font-size="21" text-anchor="middle" font-weight="normal">Сплошная стрелка — запрос / вызов. Пунктирная — ответ. Узкие полосы — обработка или ожидание ответа.</text>
+<text x="1320.0" y="1641" font-size="21" text-anchor="middle" font-weight="normal">REST → SOAP: SoapStarshipClient и CXF формируют XML; StarshipEndpoint передаёт операцию бизнес-компоненту.</text>
+<text x="1320.0" y="1679" font-size="21" text-anchor="middle" font-weight="normal">Mule связывает Starship и SpaceMarine. Проверка по HTTP и запись в БД — не распределённая транзакция.</text>
+<text x="1320.0" y="1717" font-size="21" text-anchor="middle" font-weight="normal">Показан один выбранный узел Starship. SSH-туннель и Consul опущены. Два блока starship/ejb — классы одного модуля.</text>
+</g></svg>

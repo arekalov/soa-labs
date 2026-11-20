@@ -2,6 +2,8 @@
 
 ## Отдельные изображения
 
+- Диаграмма последовательности (модули сверху и снизу, стрелки запросов и ответов): [PNG](docs/lab4-sequence.png), [SVG](docs/lab4-sequence.svg).
+
 - Общая схема компонентов: [PNG](docs/lab4-components.png), [SVG](docs/lab4-components.svg).
 - Диаграмма действий при посадке десантника: [PNG](docs/lab4-activity.png), [SVG](docs/lab4-activity.svg).
 
