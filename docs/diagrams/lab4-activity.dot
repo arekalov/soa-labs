@@ -6,7 +6,7 @@ digraph Activity {
   request [label="Браузер: POST /starship/54/board/12\nHAProxy выбирает доступный узел"];
   controller [label="StarshipController.board(54, 12)\nИзвлечь параметры REST-запроса"];
   soap [label="MuleStarshipClient\nОтправить параметры в JSON по HTTPS"];
-  soapmule [label="Mule :27781 → SOAP listener нужного узла\nDataWeave: JSON → SOAP XML", fillcolor="#fff0d5", color="#bc8b34"];
+  soapmule [label="Mule :27781 → HAProxy :27345 → SOAP\nDataWeave: JSON → SOAP XML", fillcolor="#fff0d5", color="#bc8b34"];
   endpoint [label="StarshipEndpoint.board(54, 12)\nВызвать StarshipBean через EJB-контейнер"];
   ids [shape=diamond, label="Оба ID > 0?", fillcolor="#fff0d5", color="#bc8b34"];
   find [label="StarshipRepository\nНайти корабль 54", fillcolor="#dff4e9", color="#4b9671"];
@@ -25,7 +25,7 @@ digraph Activity {
   nomarine [label="Десантник не найден · 404", fillcolor="#fde9e7", color="#bc675e"];
   unavailable [label="Зависимость недоступна · 503", fillcolor="#fde9e7", color="#bc675e"];
   internal [label="Неожиданный ответ 400\nот зависимости · ошибка 500", fillcolor="#fde9e7", color="#bc675e"];
-  fault [label="StarshipEndpoint: StarshipFault\nКод ошибки передаётся в detail.status\nREST-обработчик: HTTP-статус + JSON", fillcolor="#fde9e7", color="#bc675e"];
+  fault [label="StarshipEndpoint: StarshipFault\nКод ошибки передаётся в detail.status\nMule response.dwl: HTTP-статус + JSON", fillcolor="#fde9e7", color="#bc675e"];
   finish [shape=doublecircle, label="", width=0.2, style=filled, fillcolor="#25364b", color="#25364b"];
   { node [group="main"]; start; request; controller; soap; endpoint; ids; find; found; occupied; check; mule; sm; status; save; result; ok; finish; }
   start -> request -> controller -> soap -> soapmule -> endpoint -> ids [weight=30];

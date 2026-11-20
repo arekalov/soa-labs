@@ -58,23 +58,23 @@ IP SAN `127.0.0.1` (текущий публичный `certs/spacemarine.crt` с
 * Маршрут SpaceMarine — узкий proxy текущего GET-клиента: не универсальный reverse proxy заголовков,
   cookies, query parameters или других HTTP методов.
 
-* `POST https://localhost:27781/starship-1/operations/{operation}` — JSON → SOAP upstream :27544.
-* `POST https://localhost:27781/starship-2/operations/{operation}` — JSON → SOAP upstream :27644.
+* `POST https://localhost:27781/starship/operations/{operation}` — единый JSON → SOAP flow.
+  Upstream: HTTPS localhost:27345 → HAProxy → доступный SOAP-узел :27544/:27644.
   Восемь операций: list, getById, create, createWithId, rename, delete, board, unload.
   Преобразования реализованы в `src/main/resources/transforms/request.dwl` и `response.dwl`.
   Core Set Payload загружает DataWeave через `${file::...}`; HTTP Connector отправляет
   SOAP Envelope. Web Service Consumer и Enterprise-компоненты не требуются.
   SOAP Fault превращается в JSON ErrorDto и соответствующий HTTP-статус;
   транспортный сбой — 503. Ответ создаётся в Mule, REST-прослойка его передаёт.
-  В логах `MULE_ADAPTER node=starship-1 operation=board status=200`.
+  В логах `MULE_ADAPTER upstream=haproxy-soap operation=board status=200`.
 
 ```text
-REST-прослойка → JSON → Mule :27781 → SOAP XML → StarshipEndpoint → StarshipBean
+REST-прослойка → JSON → Mule :27781 → SOAP XML → HAProxy :27345 → StarshipEndpoint → StarshipBean
                                                                 │
                           SpaceMarine ← Mule :27780 ←────────────┘
 ```
 
-Оба блока Mule — один runtime. У JSON/SOAP flows и SpaceMarine flow отдельные
+Оба блока Mule — один runtime. У JSON/SOAP flow и SpaceMarine flow отдельные
 лимиты `maxConcurrency=2`. Схемы: [взаимодействие](../README-LAB4-INTERACTION.md).
 
 ```bash
@@ -140,8 +140,7 @@ proxy возвращает 502. Записи `MULE_PROXY` с path/status под�
 После запуска `scripts/tunnel-lab4.sh` из корня репозитория:
 
 ```bash
-python3 scripts/test-lab4-mule.py --node 1
-python3 scripts/test-lab4-mule.py --node 2
+python3 scripts/test-lab4-mule.py
 ```
 
 Каждый прогон проверяет JSON → SOAP → JSON, Unicode/XML-символы, пагинацию,

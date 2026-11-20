@@ -12,11 +12,11 @@ from urllib.request import Request, urlopen
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--node', choices=['1', '2'], default='1')
+    parser.add_argument('--url', default='https://localhost:27781/starship/operations')
     parser.add_argument('--ca-cert', default='certs/starship.crt')
     args = parser.parse_args()
     context = ssl.create_default_context(cafile=args.ca_cert)
-    base = 'https://localhost:27781/starship-' + args.node + '/operations/'
+    base = args.url.rstrip('/') + '/'
     owned = []
     count = 0
 

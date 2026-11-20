@@ -30,7 +30,8 @@
                               │ HTTPS / JSON :27781
                               ▼
                      Mule: DataWeave JSON → SOAP
-                              │ HTTPS / SOAP :27544 или :27644
+                              │ HTTPS / SOAP → HAProxy :27345
+                              │ → доступный SOAP-узел :27544 / :27644
                               ▼
                      StarshipEndpoint → StarshipBean → БД
                                               │ HTTP :27780
@@ -45,16 +46,16 @@ REST-прослойка использует `MuleStarshipClient` и не сод
 | Компонент | Адрес / порт | Назначение |
 |---|---|---|
 | HAProxy | HTTPS 27343 | Прежняя точка входа клиента в Starship |
+| HAProxy SOAP | HTTPS 27345, loopback | Единый SOAP upstream для Mule, roundrobin по SOAP-узлам |
 | SpaceMarine | HTTPS 27443 | Прежний REST API |
 | Starship 1 / 2 | HTTPS 27543 / 27643 | REST facade и публичный диагностический SOAP endpoint |
-| Внутренний SOAP | HTTPS 27544 / 27644, loopback | Mule → SOAP, отдельные workers |
+| Внутренний SOAP | HTTPS 27544 / 27644, loopback | HAProxy → SOAP, отдельные workers |
 | Mule SpaceMarine | HTTP 27780, loopback | `/health`, `/space-marines/{id}` |
-| Mule JSON adapter | HTTPS 27781, loopback | `/starship-N/operations/{operation}`, POST JSON |
+| Mule JSON adapter | HTTPS 27781, loopback | `/starship/operations/{operation}`, POST JSON |
 | Consul | HTTP 27500, loopback | Регистрации и health checks |
 | HAProxy stats | HTTP 27344, loopback | Состояние backend-узлов |
 
-В свойствах WildFly задан `starship.mule.url=https://localhost:27781/starship-1/operations`
-или адрес для `starship-2`. Старый `starship.soap.url` удаляется установочным скриптом.
+В свойствах всех реплик WildFly задан `starship.mule.url=https://localhost:27781/starship/operations`. Старый `starship.soap.url` удаляется установочным скриптом.
 Mule использует существующие PKCS12 keystore/truststore; проверка TLS включена.
 Серверный SOAP-контракт и клиентские REST URL не меняются. При остановке Mule
 внешние SOAP-зависимые операции возвращают 503; прямого обходного маршрута нет.
@@ -173,7 +174,7 @@ ssh ifmo 'tail -50 ~/soa/logs/mule.out'
 ssh ifmo 'tail -50 ~/soa/logs/starship-1.out'
 ```
 
-Строки `MULE_PROXY method=GET path=/space-marines/... status=...` подтверждают прохождение запросов через шину. Строки `MULE_ADAPTER node=starship-1 operation=board status=200` (либо REST-статус ошибки) подтверждают SOAP-маршрут. Тела данных и секреты не логируются.
+Строки `MULE_PROXY method=GET path=/space-marines/... status=...` подтверждают прохождение запросов через шину. Строки `MULE_ADAPTER upstream=haproxy-soap operation=board status=200` (либо REST-статус ошибки) подтверждают SOAP-маршрут. Тела данных и секреты не логируются.
 
 ### Consul после долгого простоя
 

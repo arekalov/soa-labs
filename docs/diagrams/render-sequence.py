@@ -18,7 +18,8 @@ messages = [
     (0, 1, '1. POST /starship/54/board/12', False),
     (1, 2, '2. HTTPS → выбранный узел', False),
     (2, 5, 'JSON board(54, 12) → HTTPS :27781', False),
-    (5, 3, 'JSON → SOAP XML → :27544 или :27644', False),
+    (5, 1, 'SOAP XML → внутренний вход :27345', False),
+    (1, 3, 'HAProxy → доступный SOAP-узел :27544 / :27644', False),
     (3, 4, '4. EJB: board(54, 12)', False),
     (4, 7, '5. Через StarshipRepository: найти корабль и проверить занятость десантника', False),
     (7, 4, '6. Корабль найден; десантник ещё не находится на борту', True),
@@ -31,7 +32,8 @@ messages = [
     (4, 7, '13. Через StarshipRepository: сохранить связь корабль 54 → десантник 12', False),
     (7, 4, '14. Изменения сохранены в транзакции', True),
     (4, 3, '15. StarshipDto', True),
-    (3, 5, 'SOAP-ответ: Ship в XML', True),
+    (3, 1, 'SOAP-ответ: Ship в XML', True),
+    (1, 5, 'HAProxy → SOAP-ответ в Mule', True),
     (5, 2, 'SOAP → JSON + HTTP-статус', True),
     (2, 1, '17. HTTP 200 + JSON', True),
     (1, 0, '18. HTTP 200 + JSON', True),
@@ -60,7 +62,7 @@ for i,start,end in [(1,260,1495),(2,325,1430),(5,390,1365),(3,455,1300),(4,520,1
 for n,(a,b,label,response) in enumerate(messages):
     import re
     label = f'{n+1}. ' + re.sub(r'^\d+\. ', '', label)
-    y=260+n*65
+    y=260+n*55
     dash=' stroke-dasharray="9 6"' if response else ''
     svg.append(f'<line x1="{xs[a]}" y1="{y}" x2="{xs[b]}" y2="{y}" stroke="#344d6b" stroke-width="2"{dash} marker-end="url(#arrow)"/>')
     middle=(xs[a]+xs[b])/2

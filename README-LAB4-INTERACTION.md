@@ -9,8 +9,9 @@ flowchart TD
     HA --> R2["Starship REST-прослойка :27643"]
     R1 -->|"JSON / HTTPS"| M
     R2 -->|"JSON / HTTPS"| M
-    M["Mule :27781 — DataWeave JSON ↔ SOAP"] -->|"SOAP / HTTPS"| S1["Starship SOAP :27544"]
-    M -->|"SOAP / HTTPS"| S2["Starship SOAP :27644"]
+    M["Mule :27781 — один flow JSON ↔ SOAP"] -->|"SOAP / HTTPS"| HS["HAProxy :27345 — балансировка SOAP"]
+    HS --> S1["Starship SOAP :27544"]
+    HS --> S2["Starship SOAP :27644"]
     S1 --> B1["StarshipBean — реплика 1"]
     S2 --> B2["StarshipBean — реплика 2"]
     B1 -->|"HTTP GET"| MR["Тот же Mule :27780 — SpaceMarine proxy"]
@@ -30,10 +31,11 @@ flowchart TD
 flowchart TD
     UI["Клиент → HAProxy"] --> C["StarshipController.board(54, 12)"]
     C --> J["MuleStarshipClient.call(board, параметры)"]
-    J -->|"HTTPS POST /starship-N/operations/board; JSON"| M["Mule: starship-N-json-to-soap"]
+    J -->|"HTTPS POST /starship/operations/board; JSON"| M["Mule: starship-json-to-soap"]
     M --> DW["DataWeave request.dwl: JSON → SOAP Envelope"]
     DW --> HTTP["HTTP Connector: POST SOAP XML"]
-    HTTP --> EP["StarshipEndpoint.board(54, 12)"]
+    HTTP --> HS["HAProxy :27345: выбрать доступный SOAP-узел"]
+    HS --> EP["StarshipEndpoint.board(54, 12)"]
     EP -->|"EJB"| BEAN["StarshipBean.board(54, 12)"]
     BEAN --> FIND["StarshipRepository.findById(54)"]
     FIND --> CHECK["StarshipRepository.findFirstByMarine(12)"]
@@ -44,7 +46,7 @@ flowchart TD
     MB --> MR["SpaceMarineRepository.findById(12) → БД"]
     MR -.->|"HTTP 200 обратно через Bean, Controller и Mule; exists = true"| SAVE["StarshipBean: добавить ID; StarshipRepository.save"]
     SAVE --> OUT["StarshipEndpoint: DTO → SOAP Ship; сервер формирует XML"]
-    OUT --> RESPONSE["Mule response.dwl: SOAP XML / Fault → JSON + статус"]
+    OUT -->|"SOAP-ответ через HAProxy :27345"| RESPONSE["Mule response.dwl: SOAP XML / Fault → JSON + статус"]
     RESPONSE --> RETURN["MuleStarshipClient → StarshipController → HAProxy → клиент"]
 ```
 
@@ -54,10 +56,10 @@ REST-прослойка сохраняет прежние URL и проверя�
 
 Шина выполняет:
 
-1. Принимает JSON по `POST https://localhost:27781/starship-N/operations/{operation}`.
+1. Принимает JSON по `POST https://localhost:27781/starship/operations/{operation}`.
 2. Проверяет операцию по списку восьми разрешённых операций.
 3. `transforms/request.dwl` создаёт SOAP 1.1 Envelope и типизированные XML-поля в namespace `urn:soa:starship:v1`; XML writer экранирует строки.
-4. HTTP Connector вызывает фиксированный SOAP listener своей реплики с TLS-проверкой. Автоматических прикладных повторов нет.
+4. HTTP Connector вызывает единый SOAP-вход HAProxy :27345 с TLS-проверкой. Автоматических прикладных повторов нет.
 5. `transforms/response.dwl` преобразует SOAP-ответ в JSON, включая массивы, числа, пагинацию и результат высадки. Назначает 201 при создании, 204 при удалении, 200 при остальных успешных операциях.
 6. Для SOAP Fault извлекает `detail/StarshipFault`, возвращает JSON ошибки и 400/404/409/422/500/503. Транспортные ошибки дают 503.
 
@@ -67,8 +69,8 @@ Mule отвечает за адаптацию протоколов; бизнес
 
 ## Настройки и исходники
 
-- `starship.mule.url=https://localhost:27781/starship-1/operations` (во втором узле — `starship-2`).
-- SOAP upstream: HTTPS 27544/27644; timeout 25 секунд. REST-прослойка ждёт Mule до 30 секунд.
+- `starship.mule.url=https://localhost:27781/starship/operations` — одинаково для всех REST-реплик.
+- SOAP upstream Mule: HTTPS localhost:27345 → HAProxy → 27544/27644; timeout 25 секунд. REST-прослойка ждёт Mule до 30 секунд.
 - SpaceMarine proxy: HTTP 27780 → HTTPS 27443. Отдельные flows допускают вложенный вызов при выполнении SOAP-операции.
 - [Конфигурация Mule](mule/src/main/mule/proxy.xml)
 - [JSON → SOAP](mule/src/main/resources/transforms/request.dwl)
@@ -76,3 +78,20 @@ Mule отвечает за адаптацию протоколов; бизнес
 - [JSON-клиент REST-прослойки](starship/web/src/main/kotlin/ru/ifmo/soa/starship/client/MuleStarshipClient.kt)
 
 Источником актуальных схем служат Mermaid-блоки выше. Пользовательские `docs/sequence.png` и `docs/components.png` автоматически не перезаписываются.
+
+## Масштабирование SOAP
+
+В Mule один flow `starship-json-to-soap`; количество реплик в нём не задано.
+HAProxy имеет два входа: REST :27343 и внутренний SOAP :27345. Это один процесс.
+REST- и SOAP-реплики выбираются независимо; состояние хранится в общей БД.
+SOAP backend направляет запросы только на отдельные SOAP workers, без возврата в REST.
+
+Список SOAP-портов задаётся `STARSHIP_SOAP_PORTS` при выполнении
+`scripts/remote/setup-haproxy.sh` (по умолчанию `27544 27644`). После добавления
+нового запущенного SOAP-узла изменить список и применить конфигурацию HAProxy.
+Mule и адреса REST-клиентов менять не нужно. Добавление самой REST-реплики
+по-прежнему требует регистрации в REST backend HAProxy. Автоматическое
+обнаружение узлов через Consul здесь не реализовано.
+
+SOAP backend проверяет WSDL и исключает недоступные узлы. `retries 0`
+отключает автоматические повторы SOAP POST, чтобы не повторять изменяющие операции.

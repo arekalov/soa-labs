@@ -8,10 +8,12 @@ MVN="${MVN:-mvn}"
 "$MVN" -B -f mule/pom.xml -DskipAST=true package
 APP=mule/target/soa-mule-proxy-1.0.0-mule-application.jar
 [ -f "$APP" ]
-ssh "$SSH_HOST" 'mkdir -p ~/soa/bin ~/soa/mule/conf ~/soa/mule/src/main/resources ~/soa/mule/target'
+ssh "$SSH_HOST" 'mkdir -p ~/soa/bin ~/soa/mule/conf ~/soa/mule/src/main/resources/transforms ~/soa/mule/src/main/mule ~/soa/mule/target'
 scp scripts/remote/{soa-control,setup-lab4-wildfly,setup-haproxy,setup-mule,run-mule}.sh "$SSH_HOST:soa/bin/"
 scp mule/conf/scheduler-pools.conf "$SSH_HOST:soa/mule/conf/"
 scp mule/src/main/resources/log4j2.xml "$SSH_HOST:soa/mule/src/main/resources/"
+scp mule/src/main/mule/proxy.xml "$SSH_HOST:soa/mule/src/main/mule/"
+scp mule/src/main/resources/transforms/*.dwl "$SSH_HOST:soa/mule/src/main/resources/transforms/"
 scp "$APP" "$SSH_HOST:soa/mule/target/"
 ssh "$SSH_HOST" 'chmod +x ~/soa/bin/*.sh; ~/soa/bin/soa-control.sh stop starship-1; ~/soa/bin/soa-control.sh stop starship-2; ~/soa/bin/soa-control.sh stop mule'
 ssh "$SSH_HOST" 'set -e; ~/soa/bin/setup-mule.sh; ~/soa/bin/setup-lab4-wildfly.sh starship-1; ~/soa/bin/setup-lab4-wildfly.sh starship-2'
@@ -21,6 +23,8 @@ for node in starship-1 starship-2; do
 done
 # Уже работающие SpaceMarine/Consul не перезапускаются. start идемпотентен.
 ssh "$SSH_HOST" 'set -e; ~/soa/bin/soa-control.sh start consul; ~/soa/bin/soa-control.sh start spacemarine; ~/soa/bin/soa-control.sh start mule; ~/soa/bin/soa-control.sh start starship-1; ~/soa/bin/soa-control.sh start starship-2; ~/soa/bin/soa-control.sh stop haproxy; ~/soa/bin/setup-haproxy.sh; ~/soa/bin/soa-control.sh start haproxy'
+# SOAP-вход HAProxy должен быть готов независимо от REST-входа.
+ssh "$SSH_HOST" 'curl -fsS --max-time 30 --cacert "$HOME/soa/secrets/starship.crt" "https://localhost:27345/starship-soap/StarshipService?wsdl" >/dev/null'
 # WSDL может отвечать даже при ошибке запуска Spring WAR: проверяем оба REST-контекста.
 ssh "$SSH_HOST" 'set -e; for port in 27543 27643; do curl -fsS --max-time 30 --cacert "$HOME/soa/secrets/starship.crt" "https://localhost:$port/starship?size=1" >/dev/null; done'
 # Существующий клиент копируется без изменения исходников или bundle.

@@ -2,7 +2,33 @@
 
 Дата проверки: 14 ноября 2026 года. Стенд: helios, ветка `lab4`.
 
-## Итог 20 ноября 2026: преобразования JSON ↔ SOAP выполняет Mule
+## Текущая архитектура: единый Mule flow и балансировка SOAP
+
+`starship-json-to-soap` принимает общий путь `/starship/operations/{operation}`.
+Обе REST-реплики используют один адрес Mule. SOAP-запрос отправляется на
+HTTPS localhost:27345 — отдельный loopback frontend того же HAProxy.
+Backend `starship_soap_nodes` распределяет вызовы между 27544 и 27644,
+проверяет WSDL и исключает недоступные узлы. Повторы SOAP POST отключены
+через `retries 0`.
+
+Количество SOAP-реплик теперь задаётся только в HAProxy (`STARSHIP_SOAP_PORTS`
+для `setup-haproxy.sh`). При добавлении SOAP-реплики новые flow не нужны.
+SOAP workers отделены от REST workers; балансировка REST и SOAP независима.
+Список REST backend пока остаётся отдельной настройкой HAProxy.
+
+Проверки на Helios после развёртывания:
+
+- Gradle EAR и Maven package: PASS; XML принят Mule Kernel.
+- Общий JSON/SOAP-маршрут: PASS, 13 HTTP-запросов.
+- Полный REST API через HAProxy: PASS, 71 HTTP-запрос, включая board/unload.
+- SOAP-вход HAProxy :27345: WSDL 200; журнал показывает оба SOAP backend.
+- Шесть последовательных SOAP-вызовов увеличили счётчики обеих реплик в HAProxy stats.
+- При остановленном Starship 1 все 13 проверок общего Mule-маршрута прошли через Starship 2.
+  HAProxy исключил первый SOAP backend по health-check; конфиг Mule не менялся.
+- После восстановления оба SOAP backend снова UP; все шесть компонентов стенда работают.
+
+
+## Предыдущий этап 20 ноября 2026: перенос JSON ↔ SOAP в Mule
 
 REST-прослойка использует `MuleStarshipClient`: отправляет JSON и возвращает
 JSON-ответ/HTTP-статус шины. Клиент CXF и SOAP-зависимости WAR удалены.

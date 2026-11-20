@@ -26,16 +26,8 @@
       </tls:context>
     </http:listener-connection>
   </http:listener-config>
-  <http:request-config name="starship-1">
-    <http:request-connection protocol="HTTPS" host="localhost" port="27544"
-                             maxConnections="2" connectionIdleTimeout="10000">
-      <tls:context>
-        <tls:trust-store path="${SOA_TRUSTSTORE_PATH}" password="${SOA_TRUSTSTORE_PASSWORD}" type="pkcs12"/>
-      </tls:context>
-    </http:request-connection>
-  </http:request-config>
-  <http:request-config name="starship-2">
-    <http:request-connection protocol="HTTPS" host="localhost" port="27644"
+  <http:request-config name="starship-soap">
+    <http:request-connection protocol="HTTPS" host="localhost" port="27345"
                              maxConnections="2" connectionIdleTimeout="10000">
       <tls:context>
         <tls:trust-store path="${SOA_TRUSTSTORE_PATH}" password="${SOA_TRUSTSTORE_PASSWORD}" type="pkcs12"/>
@@ -69,8 +61,8 @@
       </on-error-propagate>
     </error-handler>
   </flow>
-  <flow name="starship-1-json-to-soap" maxConcurrency="2">
-    <http:listener config-ref="json-loopback" path="/starship-1/operations/{operation}" allowedMethods="POST">
+  <flow name="starship-json-to-soap" maxConcurrency="2">
+    <http:listener config-ref="json-loopback" path="/starship/operations/{operation}" allowedMethods="POST">
       <http:response statusCode="#[vars.httpStatus default 200]">
         <http:headers>#[{'Content-Type': 'application/json; charset=UTF-8'}]</http:headers>
       </http:response>
@@ -84,7 +76,7 @@
       <when expression='#[["list","getById","create","createWithId","rename","delete","board","unload"] contains vars.operation]'>
         <set-variable variableName="args" value="#[payload]"/>
         <set-payload value="#[${file::transforms/request.dwl}]"/>
-        <http:request config-ref="starship-1" method="POST" path="/starship-soap/StarshipService"
+        <http:request config-ref="starship-soap" method="POST" path="/starship-soap/StarshipService"
                       responseTimeout="25000" followRedirects="false">
           <http:headers>#[{'Content-Type': 'text/xml; charset=UTF-8', 'SOAPAction': '&quot;&quot;'}]</http:headers>
           <http:response-validator>
@@ -100,48 +92,10 @@
         <set-payload value="#[output application/json --- {code: 404, message: 'Неизвестная операция', details: null}]"/>
       </otherwise>
     </choice>
-    <logger level="INFO" message="#[ 'MULE_ADAPTER node=starship-1 operation=' ++ vars.operation ++ ' status=' ++ (vars.httpStatus as String) ]"/>
+    <logger level="INFO" message="#[ 'MULE_ADAPTER upstream=haproxy-soap operation=' ++ vars.operation ++ ' status=' ++ (vars.httpStatus as String) ]"/>
     <error-handler>
       <on-error-propagate logException="false">
-        <logger level="WARN" message="#[ 'MULE_ADAPTER node=starship-1 status=503 error=' ++ (error.errorType.identifier as String) ]"/>
-      </on-error-propagate>
-    </error-handler>
-  </flow>
-  <flow name="starship-2-json-to-soap" maxConcurrency="2">
-    <http:listener config-ref="json-loopback" path="/starship-2/operations/{operation}" allowedMethods="POST">
-      <http:response statusCode="#[vars.httpStatus default 200]">
-        <http:headers>#[{'Content-Type': 'application/json; charset=UTF-8'}]</http:headers>
-      </http:response>
-      <http:error-response statusCode="503">
-        <http:body>#[output application/json --- {code: 503, message: 'Сервис Starship недоступен, повторите запрос позже', details: null}]</http:body>
-        <http:headers>#[{'Content-Type': 'application/json; charset=UTF-8'}]</http:headers>
-      </http:error-response>
-    </http:listener>
-    <set-variable variableName="operation" value="#[attributes.uriParams.operation]"/>
-    <choice>
-      <when expression='#[["list","getById","create","createWithId","rename","delete","board","unload"] contains vars.operation]'>
-        <set-variable variableName="args" value="#[payload]"/>
-        <set-payload value="#[${file::transforms/request.dwl}]"/>
-        <http:request config-ref="starship-2" method="POST" path="/starship-soap/StarshipService"
-                      responseTimeout="25000" followRedirects="false">
-          <http:headers>#[{'Content-Type': 'text/xml; charset=UTF-8', 'SOAPAction': '&quot;&quot;'}]</http:headers>
-          <http:response-validator>
-            <http:success-status-code-validator values="100..599"/>
-          </http:response-validator>
-        </http:request>
-        <set-payload value="#[${file::transforms/response.dwl}]"/>
-        <set-variable variableName="httpStatus" value="#[payload.status]"/>
-        <set-payload value="#[output application/json --- payload.body]"/>
-      </when>
-      <otherwise>
-        <set-variable variableName="httpStatus" value="#[404]"/>
-        <set-payload value="#[output application/json --- {code: 404, message: 'Неизвестная операция', details: null}]"/>
-      </otherwise>
-    </choice>
-    <logger level="INFO" message="#[ 'MULE_ADAPTER node=starship-2 operation=' ++ vars.operation ++ ' status=' ++ (vars.httpStatus as String) ]"/>
-    <error-handler>
-      <on-error-propagate logException="false">
-        <logger level="WARN" message="#[ 'MULE_ADAPTER node=starship-2 status=503 error=' ++ (error.errorType.identifier as String) ]"/>
+        <logger level="WARN" message="#[ 'MULE_ADAPTER upstream=haproxy-soap status=503 error=' ++ (error.errorType.identifier as String) ]"/>
       </on-error-propagate>
     </error-handler>
   </flow>

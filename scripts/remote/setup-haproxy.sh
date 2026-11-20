@@ -15,6 +15,12 @@ PKG_URL="https://pkg.freebsd.org/FreeBSD:14:amd64/latest/All/haproxy-${VERSION}.
 
 FRONTEND_PORT="${HAPROXY_PORT:-27343}"
 STATS_PORT="${HAPROXY_STATS_PORT:-27344}"
+SOAP_PORT=27345
+# Дополнительные SOAP-реплики добавляются только в этот список портов.
+SOAP_PORTS="${STARSHIP_SOAP_PORTS:-27544 27644}"
+for port in $SOAP_PORTS; do
+  [[ "$port" =~ ^[0-9]+$ ]] && (( port > 0 && port < 65536 )) || { echo "Invalid SOAP port: $port" >&2; exit 1; }
+done
 NODE1_PORT="${STARSHIP_NODE1_PORT:-27543}"
 NODE2_PORT="${STARSHIP_NODE2_PORT:-27643}"
 
@@ -69,6 +75,20 @@ backend starship_nodes
     server node1 127.0.0.1:$NODE1_PORT check ssl verify none
     server node2 127.0.0.1:$NODE2_PORT check ssl verify none
 
+# Separate loopback frontend: SOAP never returns to the REST workers.
+frontend starship_soap
+    bind 127.0.0.1:$SOAP_PORT ssl crt $SECRETS/starship.pem
+    default_backend starship_soap_nodes
+
+backend starship_soap_nodes
+    balance roundrobin
+    # Mutating SOAP POST must not be automatically replayed.
+    retries 0
+    option httpchk GET /starship-soap/StarshipService?wsdl
+    http-check expect status 200
+    timeout check 5s
+$(for port in $SOAP_PORTS; do printf '    server soap%s 127.0.0.1:%s check inter 2s fall 2 rise 2 ssl verify none\n' "$port" "$port"; done)
+
 listen stats
     bind 127.0.0.1:$STATS_PORT
     stats enable
@@ -81,4 +101,5 @@ EOF
 echo
 echo "== готово =="
 echo "балансировщик: https://127.0.0.1:$FRONTEND_PORT  узлы: $NODE1_PORT, $NODE2_PORT"
+echo "SOAP: https://127.0.0.1:$SOAP_PORT  узлы: $SOAP_PORTS"
 echo "статистика:    http://127.0.0.1:$STATS_PORT"

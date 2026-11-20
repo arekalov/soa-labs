@@ -24,11 +24,13 @@ digraph Components {
 
       s2 -> b2 [label="Вызов EJB"];
     }
-    soapmule [label="Mule ESB :27781\nDataWeave JSON ↔ SOAP\nМаршруты starship-1 и starship-2", fillcolor="#fff0d5", color="#bc8b34"];
+    soapmule [label="Mule ESB :27781\nDataWeave JSON ↔ SOAP\nОдин flow starship-json-to-soap", fillcolor="#fff0d5", color="#bc8b34"];
     r1 -> soapmule [label="HTTPS / JSON"];
     r2 -> soapmule [label="HTTPS / JSON"];
-    soapmule -> s1 [label="HTTPS :27544"];
-    soapmule -> s2 [label="HTTPS :27644"];
+    soapha [label="Тот же HAProxy :27345\nSOAP backend · roundrobin"];
+    soapmule -> soapha [label="HTTPS / SOAP"];
+    soapha -> s1 [label="HTTPS :27544"];
+    soapha -> s2 [label="HTTPS :27644"];
     mule [label="Mule ESB :27780\nHTTP-маршрут /space-marines/{id}", fillcolor="#fff0d5", color="#bc8b34"];
     subgraph cluster_sm {
       label="WildFly · SpaceMarine"; labeljust=l; fontsize=18; style="rounded,filled"; fillcolor="#f4f8ff"; color="#c4d5ed";
